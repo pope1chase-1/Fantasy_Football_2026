@@ -373,6 +373,12 @@
             <button id="refreshButton" type="button">Refresh API data</button>
           </div>
         </div>
+
+        <div class="sync-box">
+          <strong>Draft sync:</strong>
+          <span id="syncStatus">Local browser only</span>
+          <span class="code-note">Set your free Supabase keys in supabase-config.js to enable real-time shared editing.</span>
+        </div>
       </div>
 
       <div id="emptyState" class="empty-state">No players match the current filters.</div>
@@ -396,6 +402,8 @@
       </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabase-config.js"></script>
     <script>
       const playerTableBody = document.getElementById('playerTableBody');
       const searchInput = document.getElementById('searchInput');
@@ -408,7 +416,37 @@
       const refreshButton = document.getElementById('refreshButton');
       const emptyState = document.getElementById('emptyState');
 
-      const state = { allPlayers: [], filteredPlayers: [] };
+      const state = { allPlayers: [], filteredPlayers: [], takenIds: new Set() };
+      const syncStatus = document.getElementById('syncStatus');
+      const sharedDraftState = {
+        enabled: false,
+        client: null,
+        channel: null
+      };
+
+      function hasSupabaseConfig() {
+        const supabaseUrl = (window.DRAFT_CONFIG && window.DRAFT_CONFIG.supabaseUrl || '').trim();
+        const supabaseKey = (window.DRAFT_CONFIG && window.DRAFT_CONFIG.supabaseAnonKey || '').trim();
+        return Boolean(
+          supabaseUrl &&
+          supabaseUrl.startsWith('https://') &&
+          supabaseKey &&
+          !supabaseUrl.includes('YOUR_') &&
+          !supabaseKey.includes('YOUR_') &&
+          window.supabase
+        );
+      }
+
+      function updateSyncStatus() {
+        if (sharedDraftState.enabled && syncStatus) {
+          syncStatus.textContent = 'Shared realtime mode';
+          return;
+        }
+
+        if (syncStatus) {
+          syncStatus.textContent = 'Local browser only';
+        }
+      }
 
       function firstNonEmpty(...values) {
         for (const value of values) {
@@ -725,7 +763,7 @@
         return 'legacy-grudge-match-draft-state';
       }
 
-      function getTakenIds() {
+      function getLocalTakenIds() {
         try {
           const saved = JSON.parse(localStorage.getItem(getDraftStateKey()) || '[]');
           return new Set(Array.isArray(saved) ? saved : []);
@@ -734,24 +772,115 @@
         }
       }
 
+      function setLocalTakenIds(ids) {
+        localStorage.setItem(getDraftStateKey(), JSON.stringify([...ids]));
+      }
+
+      function getTakenIds() {
+        return state.takenIds;
+      }
+
+      async function syncTakenIdsFromSupabase() {
+        if (!sharedDraftState.enabled || !sharedDraftState.client) {
+          state.takenIds = getLocalTakenIds();
+          return;
+        }
+
+        const { data, error } = await sharedDraftState.client
+          .from('draft_state')
+          .select('player_id, taken');
+
+        if (error) {
+          console.warn('Supabase draft sync unavailable:', error.message);
+          state.takenIds = getLocalTakenIds();
+          return;
+        }
+
+        const nextIds = new Set(
+          (data || [])
+            .filter((row) => row && row.taken)
+            .map((row) => String(row.player_id))
+        );
+
+        state.takenIds = nextIds;
+        setLocalTakenIds(nextIds);
+      }
+
+      async function initializeSharedDraftSync() {
+        if (!hasSupabaseConfig()) {
+          sharedDraftState.enabled = false;
+          state.takenIds = getLocalTakenIds();
+          updateSyncStatus();
+          return;
+        }
+
+        sharedDraftState.client = window.supabase.createClient(
+          window.DRAFT_CONFIG.supabaseUrl,
+          window.DRAFT_CONFIG.supabaseAnonKey,
+          { auth: { persistSession: false } }
+        );
+        sharedDraftState.enabled = true;
+
+        await syncTakenIdsFromSupabase();
+
+        sharedDraftState.channel = sharedDraftState.client.channel('draft-state-updates');
+        sharedDraftState.channel
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'draft_state' }, async () => {
+            await syncTakenIdsFromSupabase();
+            refreshDashboard();
+          })
+          .subscribe();
+
+        updateSyncStatus();
+      }
+
       function isPlayerTaken(player) {
         return getTakenIds().has(String(player.playerId || player.id));
       }
 
-      function setTakenIds(ids) {
-        localStorage.setItem(getDraftStateKey(), JSON.stringify([...ids]));
+      async function persistDraftSelection(playerId, taken) {
+        if (!sharedDraftState.enabled || !sharedDraftState.client) {
+          const next = new Set(getTakenIds());
+          if (taken) {
+            next.add(String(playerId));
+          } else {
+            next.delete(String(playerId));
+          }
+          state.takenIds = next;
+          setLocalTakenIds(next);
+          refreshDashboard();
+          return;
+        }
+
+        const { error } = await sharedDraftState.client
+          .from('draft_state')
+          .upsert(
+            { player_id: String(playerId), taken, updated_at: new Date().toISOString() },
+            { onConflict: 'player_id' }
+          );
+
+        if (error) {
+          console.warn('Unable to sync draft state to Supabase:', error.message);
+          return;
+        }
+
+        await syncTakenIdsFromSupabase();
+        refreshDashboard();
       }
 
-      function toggleDraftSelection(playerId) {
+      async function toggleDraftSelection(playerId) {
         const selectedId = String(playerId);
-        const current = getTakenIds();
-        if (current.has(selectedId)) {
-          current.delete(selectedId);
-        } else {
+        const current = new Set(getTakenIds());
+        const nextTaken = !current.has(selectedId);
+
+        if (nextTaken) {
           current.add(selectedId);
+        } else {
+          current.delete(selectedId);
         }
-        setTakenIds(current);
-        refreshDashboard();
+
+        state.takenIds = current;
+        await persistDraftSelection(selectedId, nextTaken);
       }
 
       function attachDraftHandlers() {
@@ -787,6 +916,7 @@
 
       setupFilters();
       attachDraftHandlers();
+      initializeSharedDraftSync();
       loadPlayers();
     </script>
   </body>
