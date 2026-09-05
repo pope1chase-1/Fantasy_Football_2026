@@ -1,0 +1,8 @@
+{
+  "name": "fantasy-football-2026-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "refresh-players": "python3 scripts/refresh_players.py"
+  }
+}

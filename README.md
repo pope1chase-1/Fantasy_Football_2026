@@ -1,15 +1,16 @@
-# Fantasy Football 2026 Dashboard
+# The Manning vs. Brady Draft Grudge Match
 
-A simple static HTML dashboard for browsing Sleeper player data, filtering by team, position, injury status, and 2026 rank.
+A polished fantasy football draft board for tracking Sleeper player data, filtering by team, position, injury status, and 2026 rank, while marking players as drafted in the rivalry showdown.
 
 ## Files
 
-- `index.html` — main dashboard UI
-- `SleeperAPI.json` — sample player dataset
+- `index.html` — interactive dashboard
+- `SleeperAPI.json` — local player dataset snapshot
+- `scripts/refresh-players.js` — fetches the latest data from the Sleeper API
 
 ## Open locally
 
-Open `index.html` in a browser, or serve the folder with a simple local web server:
+Open `index.html` directly in a browser, or serve the folder with:
 
 ```bash
 python3 -m http.server 8000
@@ -17,7 +18,23 @@ python3 -m http.server 8000
 
 Then visit `http://localhost:8000`.
 
+## Refresh the JSON from Sleeper
+
+Run:
+
+```bash
+python3 scripts/refresh_players.py
+```
+
+or:
+
+```bash
+npm run refresh-players
+```
+
+This fetches the live NFL player list from the Sleeper API and overwrites the local JSON file used by the dashboard.
+
 ## Notes
 
-This is a static front-end project intended for sharing and viewing without a backend.
+This is a static front-end project designed to run locally or on GitHub Pages without a backend.
 
