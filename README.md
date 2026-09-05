@@ -20,3 +20,4 @@ Then visit `http://localhost:8000`.
 ## Notes
 
 This is a static front-end project intended for sharing and viewing without a backend.
+
