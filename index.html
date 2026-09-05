@@ -377,7 +377,7 @@
         <div class="sync-box">
           <strong>Draft sync:</strong>
           <span id="syncStatus">Local browser only</span>
-          <span class="code-note">Set your free Supabase keys in supabase-config.js to enable real-time shared editing.</span>
+          <span class="code-note">Supabase project keys are configured for live shared editing.</span>
         </div>
       </div>
 
@@ -425,15 +425,19 @@
       };
 
       function hasSupabaseConfig() {
-        const supabaseUrl = (window.DRAFT_CONFIG && window.DRAFT_CONFIG.supabaseUrl || '').trim();
-        const supabaseKey = (window.DRAFT_CONFIG && window.DRAFT_CONFIG.supabaseAnonKey || '').trim();
+        const config = (window.DRAFT_CONFIG && window.DRAFT_CONFIG) || {};
+        const supabaseUrl = String(config.supabaseUrl || '').trim();
+        const supabaseKey = String(config.supabaseAnonKey || '').trim();
+        const supabaseLib = window.supabase || window.Supabase;
+
         return Boolean(
           supabaseUrl &&
           supabaseUrl.startsWith('https://') &&
           supabaseKey &&
           !supabaseUrl.includes('YOUR_') &&
           !supabaseKey.includes('YOUR_') &&
-          window.supabase
+          supabaseLib &&
+          typeof supabaseLib.createClient === 'function'
         );
       }
 
