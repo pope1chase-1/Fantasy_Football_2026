@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sleeper Player Dashboard</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --panel-alt: #1f2937;
+        --panel-soft: #0b1220;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --good: #34d399;
+        --warn: #fbbf24;
+        --bad: #f87171;
+        --border: rgba(148, 163, 184, 0.2);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(180deg, var(--bg), #020817);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 2.5vw, 2.8rem);
+      }
+
+      .subtle {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
+      }
+
+      .stat-label {
+        display: block;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      .stat-value {
+        font-size: clamp(1.5rem, 2vw, 2.2rem);
+        font-weight: 700;
+      }
+
+      .controls {
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 18px;
+      }
+
+      .control-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        align-items: end;
+      }
+
+      label {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      input, select, button {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.9);
+        color: var(--text);
+        padding: 10px 12px;
+        font-size: 0.95rem;
+      }
+
+      button {
+        cursor: pointer;
+        background: linear-gradient(135deg, #0ea5e9, #2563eb);
+        border: none;
+        font-weight: 700;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: rgba(15, 23, 42, 0.85);
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+
+      thead th {
+        text-align: left;
+        background: rgba(30, 41, 59, 0.95);
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 0.76rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 14px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      tbody td {
+        border-bottom: 1px solid var(--border);
+        padding: 12px;
+        vertical-align: middle;
+      }
+
+      tbody tr:hover {
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 84px;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .pill.injured {
+        background: rgba(248, 113, 113, 0.12);
+        color: #fecaca;
+        border: 1px solid rgba(248, 113, 113, 0.4);
+      }
+
+      .pill.healthy {
+        background: rgba(52, 211, 153, 0.1);
+        color: #bbf7d0;
+        border: 1px solid rgba(52, 211, 153, 0.4);
+      }
+
+      .pill.rank {
+        background: rgba(56, 189, 248, 0.14);
+        color: #bae6fd;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+      }
+
+      .empty-state {
+        display: none;
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--muted);
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+      }
+
+      .empty-state.visible {
+        display: block;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+      }
+
+      .dot-healthy { background: var(--good); }
+      .dot-injured { background: var(--bad); }
+      .dot-unknown { background: var(--warn); }
+
+      @media (max-width: 700px) {
+        .container { padding: 14px; }
+        th:nth-child(4), td:nth-child(4), th:nth-child(6), td:nth-child(6) {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <div>
+          <h1>Sleeper Player Dashboard</h1>
+          <div class="subtle">Browse players by team, position, injury status, and fantasy rank.</div>
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="stat-card">
+          <span class="stat-label">Players</span>
+          <div id="statPlayers" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Teams</span>
+          <div id="statTeams" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Injured</span>
+          <div id="statInjured" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">2026 ranks</span>
+          <div id="statRanked" class="stat-value">0</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="control-grid">
+          <div>
+            <label for="searchInput">Search player</label>
+            <input id="searchInput" type="text" placeholder="Search name, team, position..." />
+          </div>
+          <div>
+            <label for="positionFilter">Position</label>
+            <select id="positionFilter">
+              <option value="all">All positions</option>
+            </select>
+          </div>
+          <div>
+            <label for="teamFilter">Team</label>
+            <select id="teamFilter">
+              <option value="all">All teams</option>
+            </select>
+          </div>
+          <div>
+            <label for="injuryFilter">Injury</label>
+            <select id="injuryFilter">
+              <option value="all">All players</option>
+              <option value="injured">Injured</option>
+              <option value="healthy">Healthy / active</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </div>
+          <div>
+            <label for="rankFilter">2026 rank</label>
+            <select id="rankFilter">
+              <option value="all">All players</option>
+              <option value="ranked">Ranked players only</option>
+              <option value="unranked">Unranked only</option>
+            </select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="resetButton" type="button">Reset filters</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="emptyState" class="empty-state">
+        No players match the current filters.
+      </div>
+
+      <div style="overflow:auto; border-radius:14px; border:1px solid var(--border); background:rgba(15,23,42,0.85);">
+        <table>
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>ID</th>
+              <th>Team</th>
+              <th>Position</th>
+              <th>Status</th>
+              <th>Injured</th>
+              <th>2026 rank</th>
+            </tr>
+          </thead>
+          <tbody id="playerTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const playerTableBody = document.getElementById('playerTableBody');
+      const searchInput = document.getElementById('searchInput');
+      const positionFilter = document.getElementById('positionFilter');
+      const teamFilter = document.getElementById('teamFilter');
+      const injuryFilter = document.getElementById('injuryFilter');
+      const rankFilter = document.getElementById('rankFilter');
+      const resetButton = document.getElementById('resetButton');
+      const emptyState = document.getElementById('emptyState');
+
+      const state = {
+        allPlayers: [],
+        filteredPlayers: []
+      };
+
+      function firstNonEmpty(...values) {
+        for (const value of values) {
+          if (value !== undefined && value !== null && value !== '') return value;
+        }
+        return null;
+      }
+
+      function toNumber(value) {
+        if (value === null || value === undefined || value === '') return null;
+        const intValue = Number(value);
+        return Number.isFinite(intValue) ? intValue : null;
+      }
+
+      function normalizeText(value) {
+        if (value === null || value === undefined) return '';
+        return String(value).trim();
+      }
+
+      function getTeam(player) {
+        const team = firstNonEmpty(
+          player.team,
+          player.team_abbr,
+          player.team_name,
+          player.current_team,
+          player.franchise_name,
+          player.metadata && (player.metadata.team || player.metadata.team_abbr),
+          player.organization,
+          player.org
+        );
+        return normalizeText(team) || 'FA';
+      }
+
+      function getPosition(player) {
+        const position = firstNonEmpty(
+          player.position,
+          player.primary_position,
+          player.fantasy_positions && player.fantasy_positions[0],
+          player.positions && player.positions[0],
+          player.metadata && player.metadata.position
+        );
+        return normalizeText(position) || 'N/A';
+      }
+
+      function getStatus(player) {
+        return normalizeText(firstNonEmpty(player.status, player.injury_status, player.practice_participation, 'Active')) || 'Active';
+      }
+
+      function getInjuryStatus(player) {
+        const raw = [
+          player.injury_status,
+          player.injury_notes,
+          player.injury_body_part,
+          player.practice_description,
+          player.status,
+          player.practice_participation
+        ].filter(v => v !== null && v !== undefined && v !== '').join(' ');
+
+        if (!raw) return 'healthy';
+        const lowered = raw.toLowerCase();
+        if (/(injured|out|doubtful|questionable|limited|reserve|suspended|IR)/.test(lowered)) {
+          return 'injured';
+        }
+        if (/(active|full|probable|healthy)/.test(lowered)) {
+          return 'healthy';
+        }
+        return 'unknown';
+      }
+
+      function getRank2026(player) {
+        const rankCandidates = [
+          player.rank_2026,
+          player.fantasy_rank_2026,
+          player.fantasy_2026_rank,
+          player.fantasy_rank,
+          player.rank,
+          player.search_rank,
+          player.metadata && player.metadata.rank_2026,
+          player.metadata && player.metadata.fantasy_rank,
+          player.metadata && player.metadata.fantasy_2026_rank,
+          player.ranks && player.ranks.fantasy_2026,
+          player.ranks && player.ranks.rank_2026
+        ];
+
+        for (const candidate of rankCandidates) {
+          const numeric = toNumber(candidate);
+          if (numeric !== null && numeric > 0 && numeric < 9999999) {
+            return numeric;
+          }
+        }
+
+        return null;
+      }
+
+      function parsePlayerRecord(player, id) {
+        if (!player || typeof player !== 'object') return null;
+
+        const fullName = normalizeText(firstNonEmpty(player.full_name, player.name, player.display_name, player.first_name && player.last_name ? `${player.first_name} ${player.last_name}` : null));
+        const safeName = fullName || `Player ${id}`;
+
+        return {
+          id,
+          fullName: safeName,
+          playerId: normalizeText(firstNonEmpty(player.player_id, player.id, id)),
+          team: getTeam(player),
+          position: getPosition(player),
+          status: getStatus(player),
+          injuryFlag: getInjuryStatus(player),
+          rank2026: getRank2026(player),
+          active: player.active !== false,
+          raw: player
+        };
+      }
+
+      function normalizePlayers(payload) {
+        if (!payload) return [];
+
+        if (Array.isArray(payload)) {
+          return payload
+            .map((item, index) => parsePlayerRecord(item, index))
+            .filter(Boolean);
+        }
+
+        if (typeof payload === 'object') {
+          return Object.entries(payload)
+            .map(([id, player]) => parsePlayerRecord(player, id))
+            .filter(Boolean);
+        }
+
+        return [];
+      }
+
+      function populateSelect(selectElement, values) {
+        const uniqueValues = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        selectElement.innerHTML = selectElement.id === 'positionFilter'
+          ? '<option value="all">All positions</option>' + uniqueValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('')
+          : '<option value="all">All teams</option>' + uniqueValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function renderSummary(players) {
+        document.getElementById('statPlayers').textContent = players.length;
+        document.getElementById('statTeams').textContent = new Set(players.map(p => p.team).filter(v => v && v !== 'FA')).size;
+        document.getElementById('statInjured').textContent = players.filter(p => p.injuryFlag === 'injured').length;
+        document.getElementById('statRanked').textContent = players.filter(p => p.rank2026 !== null).length;
+      }
+
+      function getFilteredPlayers() {
+        const searchText = searchInput.value.trim().toLowerCase();
+        const positionValue = positionFilter.value;
+        const teamValue = teamFilter.value;
+        const injuryValue = injuryFilter.value;
+        const rankValue = rankFilter.value;
+
+        return state.allPlayers.filter(player => {
+          const matchesSearch = !searchText || [
+            player.fullName,
+            player.team,
+            player.position,
+            player.status
+          ].join(' ').toLowerCase().includes(searchText);
+
+          const matchesPosition = positionValue === 'all' || player.position === positionValue;
+          const matchesTeam = teamValue === 'all' || player.team === teamValue;
+
+          const matchesInjury =
+            injuryValue === 'all' ||
+            (injuryValue === 'injured' && player.injuryFlag === 'injured') ||
+            (injuryValue === 'healthy' && player.injuryFlag === 'healthy') ||
+            (injuryValue === 'unknown' && player.injuryFlag === 'unknown');
+
+          const matchesRank =
+            rankValue === 'all' ||
+            (rankValue === 'ranked' && player.rank2026 !== null) ||
+            (rankValue === 'unranked' && player.rank2026 === null);
+
+          return matchesSearch && matchesPosition && matchesTeam && matchesInjury && matchesRank;
+        });
+      }
+
+      function renderTable(players) {
+        if (!players.length) {
+          emptyState.classList.add('visible');
+          playerTableBody.innerHTML = '';
+          return;
+        }
+
+        emptyState.classList.remove('visible');
+
+        const sorted = [...players].sort((a, b) => {
+          const aRank = a.rank2026 ?? Number.MAX_SAFE_INTEGER;
+          const bRank = b.rank2026 ?? Number.MAX_SAFE_INTEGER;
+          if (aRank !== bRank) return aRank - bRank;
+          return a.fullName.localeCompare(b.fullName);
+        });
+
+        playerTableBody.innerHTML = sorted.map(player => {
+          const injuryPill = player.injuryFlag === 'injured'
+            ? '<span class="pill injured">Injured</span>'
+            : player.injuryFlag === 'healthy'
+              ? '<span class="pill healthy">Healthy</span>'
+              : '<span class="pill" style="background:rgba(251,191,36,0.12);color:#fde68a;border:1px solid rgba(251,191,36,0.35);">Unknown</span>';
+
+          const rankText = player.rank2026 !== null ? `<span class="pill rank">#${player.rank2026}</span>` : '<span class="subtle">N/A</span>';
+
+          return `
+            <tr>
+              <td><strong>${escapeHtml(player.fullName)}</strong></td>
+              <td>${escapeHtml(player.playerId || 'N/A')}</td>
+              <td>${escapeHtml(player.team)}</td>
+              <td>${escapeHtml(player.position)}</td>
+              <td>${escapeHtml(player.status)}</td>
+              <td>${injuryPill}</td>
+              <td>${rankText}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function refreshDashboard() {
+        const filtered = getFilteredPlayers();
+        state.filteredPlayers = filtered;
+        renderTable(filtered);
+        renderSummary(filtered);
+      }
+
+      function setupFilters() {
+        searchInput.addEventListener('input', refreshDashboard);
+        positionFilter.addEventListener('change', refreshDashboard);
+        teamFilter.addEventListener('change', refreshDashboard);
+        injuryFilter.addEventListener('change', refreshDashboard);
+        rankFilter.addEventListener('change', refreshDashboard);
+
+        resetButton.addEventListener('click', () => {
+          searchInput.value = '';
+          positionFilter.value = 'all';
+          teamFilter.value = 'all';
+          injuryFilter.value = 'all';
+          rankFilter.value = 'all';
+          refreshDashboard();
+        });
+      }
+
+      function updateFilterOptions(players) {
+        populateSelect(positionFilter, players.map(p => p.position));
+        populateSelect(teamFilter, players.map(p => p.team));
+      }
+
+      function renderLoadError(message) {
+        emptyState.classList.add('visible');
+        emptyState.textContent = message;
+        playerTableBody.innerHTML = '';
+      }
+
+      async function loadPlayers() {
+        try {
+          const response = await fetch('./SleeperAPI.json', { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error(`Could not load SleeperAPI.json (${response.status})`);
+          }
+          const payload = await response.json();
+          const players = normalizePlayers(payload);
+
+          state.allPlayers = players;
+          updateFilterOptions(players);
+          refreshDashboard();
+
+          if (!players.length) {
+            renderLoadError('SleeperAPI.json loaded successfully, but it contains no player entries yet.');
+          }
+        } catch (error) {
+          renderLoadError('Unable to load SleeperAPI.json. Make sure the file exists in this directory and contains valid JSON data.');
+          console.error(error);
+        }
+      }
+
+      setupFilters();
+      loadPlayers();
+    </script>
+  </body>
+</html>
