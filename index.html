@@ -424,6 +424,16 @@
         channel: null
       };
 
+      function hasGoogleAppsConfig() {
+        const config = (window.DRAFT_CONFIG && window.DRAFT_CONFIG) || {};
+        const appsUrl = String(config.googleAppsScriptUrl || '').trim();
+        return Boolean(
+          appsUrl &&
+          appsUrl.startsWith('https://') &&
+          !appsUrl.includes('REPLACE_WITH_YOUR')
+        );
+      }
+
       function hasSupabaseConfig() {
         const config = (window.DRAFT_CONFIG && window.DRAFT_CONFIG) || {};
         const supabaseUrl = String(config.supabaseUrl || '').trim();
@@ -811,9 +821,26 @@
       }
 
       async function initializeSharedDraftSync() {
-        if (!hasSupabaseConfig()) {
+        const useGoogleApps = hasGoogleAppsConfig();
+        const useSupabase = hasSupabaseConfig();
+
+        if (!useGoogleApps && !useSupabase) {
           sharedDraftState.enabled = false;
           state.takenIds = getLocalTakenIds();
+          updateSyncStatus();
+          return;
+        }
+
+        sharedDraftState.enabled = true;
+        sharedDraftState.mode = useGoogleApps ? 'google' : 'supabase';
+
+        if (useGoogleApps) {
+          sharedDraftState.googleAppsScriptUrl = window.DRAFT_CONFIG.googleAppsScriptUrl;
+          await syncTakenIdsFromGoogleApps();
+          window.setInterval(async () => {
+            await syncTakenIdsFromGoogleApps();
+            refreshDashboard();
+          }, 1500);
           updateSyncStatus();
           return;
         }
@@ -823,7 +850,6 @@
           window.DRAFT_CONFIG.supabaseAnonKey,
           { auth: { persistSession: false } }
         );
-        sharedDraftState.enabled = true;
 
         await syncTakenIdsFromSupabase();
 
@@ -833,9 +859,41 @@
             await syncTakenIdsFromSupabase();
             refreshDashboard();
           })
-          .subscribe();
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              updateSyncStatus();
+            }
+          });
 
         updateSyncStatus();
+      }
+
+      async function syncTakenIdsFromGoogleApps() {
+        const appsUrl = window.DRAFT_CONFIG && window.DRAFT_CONFIG.googleAppsScriptUrl;
+        if (!appsUrl) {
+          state.takenIds = getLocalTakenIds();
+          return;
+        }
+
+        try {
+          const response = await fetch(`${appsUrl}?action=read`, { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error(`Google Apps Script read failed: ${response.status}`);
+          }
+
+          const payload = await response.json();
+          const rows = Array.isArray(payload.rows) ? payload.rows : [];
+          const nextIds = new Set(
+            rows
+              .filter((row) => row && row.taken)
+              .map((row) => String(row.player_id))
+          );
+          state.takenIds = nextIds;
+          setLocalTakenIds(nextIds);
+        } catch (error) {
+          console.warn('Google Apps Script sync unavailable:', error.message);
+          state.takenIds = getLocalTakenIds();
+        }
       }
 
       function isPlayerTaken(player) {
@@ -843,6 +901,34 @@
       }
 
       async function persistDraftSelection(playerId, taken) {
+        const appsUrl = window.DRAFT_CONFIG && window.DRAFT_CONFIG.googleAppsScriptUrl;
+
+        if (sharedDraftState.mode === 'google' && appsUrl) {
+          try {
+            const response = await fetch(appsUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'upsert',
+                player_id: String(playerId),
+                taken,
+                updated_at: new Date().toISOString()
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error(`Google Apps Script write failed: ${response.status}`);
+            }
+
+            await syncTakenIdsFromGoogleApps();
+            refreshDashboard();
+            return;
+          } catch (error) {
+            console.warn('Unable to sync draft state to Google Sheets:', error.message);
+            return;
+          }
+        }
+
         if (!sharedDraftState.enabled || !sharedDraftState.client) {
           const next = new Set(getTakenIds());
           if (taken) {
