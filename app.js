@@ -3,6 +3,9 @@ const teamNames = [
   'Team 5', 'Team 6', 'Team 7', 'Team 8'
 ];
 
+const config = window.DRAFT_CONFIG || {};
+const GOOGLE_APPS_SCRIPT_URL = config.googleAppsScriptUrl || '';
+
 const state = {
   currentTab: 'dashboard',
   week: 1,
@@ -13,6 +16,7 @@ const state = {
   })),
   rosterByTeam: {},
   allPlayers: [],
+  draftOwnership: {},
   draftOrder: [
     [1, 2, 3, 4, 5, 6, 7, 8],
     [8, 7, 6, 5, 4, 3, 2, 1],
@@ -62,34 +66,92 @@ function initRosterState() {
   });
 }
 
-function loadPlayersFromApi() {
-  return fetch('./SleeperAPI.json', { cache: 'no-store' })
-    .then((response) => response.ok ? response.json() : Promise.reject(new Error('Unable to load player data')))
-    .then((data) => {
-      if (!data || typeof data !== 'object') return [];
-      const entries = Object.entries(data).slice(0, 120);
-      state.allPlayers = entries.map(([id, player]) => {
-        const raw = player || {};
-        const firstName = raw.first_name || '';
-        const lastName = raw.last_name || '';
-        return {
-          id: String(id),
-          fullName: `${firstName} ${lastName}`.trim() || `Player ${id}`,
-          position: raw.position || 'N/A',
-          team: raw.team || 'FA',
-          status: 'Active'
-        };
+function normalizePlayerPayload(data) {
+  if (!data || typeof data !== 'object') return [];
+  const entries = Object.entries(data).slice(0, 200);
+  return entries.map(([id, player]) => {
+    const raw = player || {};
+    const firstName = raw.first_name || '';
+    const lastName = raw.last_name || '';
+    return {
+      id: String(id),
+      fullName: `${firstName} ${lastName}`.trim() || `Player ${id}`,
+      position: raw.position || 'N/A',
+      team: raw.team || 'FA',
+      status: 'Active'
+    };
+  });
+}
+
+function loadDraftOwnership() {
+  if (!GOOGLE_APPS_SCRIPT_URL) return Promise.resolve([]);
+
+  return fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=read`, { cache: 'no-store' })
+    .then((response) => {
+      if (!response.ok) throw new Error('Unable to load draft ownership');
+      return response.json();
+    })
+    .then((payload) => {
+      const rows = Array.isArray(payload && payload.rows) ? payload.rows : [];
+      state.draftOwnership = {};
+      rows.forEach((row) => {
+        if (!row || !row.player_id) return;
+        state.draftOwnership[String(row.player_id)] = row.taken === true;
       });
+      return rows;
     })
     .catch(() => {
-      state.allPlayers = [
-        { id: '1', fullName: 'Patrick Mahomes', position: 'QB', team: 'KC', status: 'Active' },
-        { id: '2', fullName: 'Christian McCaffrey', position: 'RB', team: 'SF', status: 'Active' },
-        { id: '3', fullName: 'Breece Hall', position: 'RB', team: 'NYJ', status: 'Active' },
-        { id: '4', fullName: 'A.J. Brown', position: 'WR', team: 'PHI', status: 'Active' },
-        { id: '5', fullName: 'Puka Nacua', position: 'WR', team: 'LAR', status: 'Active' },
-        { id: '6', fullName: 'Sam LaPorta', position: 'TE', team: 'DET', status: 'Active' }
-      ];
+      state.draftOwnership = {};
+      return [];
+    });
+}
+
+function saveDraftOwnership(playerId, taken) {
+  if (!GOOGLE_APPS_SCRIPT_URL) return Promise.resolve(false);
+
+  return fetch(GOOGLE_APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'upsert', player_id: String(playerId), taken, updated_at: new Date().toISOString() })
+  }).then((response) => response.ok).catch(() => false);
+}
+
+function loadPlayersFromApi() {
+  const cached = localStorage.getItem('fantasy_sleeper_players');
+  if (cached) {
+    try {
+      state.allPlayers = normalizePlayerPayload(JSON.parse(cached));
+    } catch (error) {
+      state.allPlayers = [];
+    }
+  }
+
+  return fetch('https://api.sleeper.app/v1/players/nfl', { cache: 'no-store' })
+    .then((response) => {
+      if (!response.ok) throw new Error('Unable to load live data');
+      return response.json();
+    })
+    .then((data) => {
+      state.allPlayers = normalizePlayerPayload(data);
+      localStorage.setItem('fantasy_sleeper_players', JSON.stringify(data));
+    })
+    .catch(() => {
+      return fetch('./SleeperAPI.json', { cache: 'no-store' })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error('Unable to load local player data')))
+        .then((data) => {
+          state.allPlayers = normalizePlayerPayload(data);
+          localStorage.setItem('fantasy_sleeper_players', JSON.stringify(data));
+        })
+        .catch(() => {
+          state.allPlayers = [
+            { id: '1', fullName: 'Patrick Mahomes', position: 'QB', team: 'KC', status: 'Active' },
+            { id: '2', fullName: 'Christian McCaffrey', position: 'RB', team: 'SF', status: 'Active' },
+            { id: '3', fullName: 'Breece Hall', position: 'RB', team: 'NYJ', status: 'Active' },
+            { id: '4', fullName: 'A.J. Brown', position: 'WR', team: 'PHI', status: 'Active' },
+            { id: '5', fullName: 'Puka Nacua', position: 'WR', team: 'LAR', status: 'Active' },
+            { id: '6', fullName: 'Sam LaPorta', position: 'TE', team: 'DET', status: 'Active' }
+          ];
+        });
     });
 }
 
@@ -187,21 +249,27 @@ function renderRosters() {
     return;
   }
 
-  rosterBody.innerHTML = roster.map((entry) => `
-    <tr>
-      <td><strong>${entry.name}</strong></td>
-      <td>${entry.position}</td>
-      <td>${entry.playerId}</td>
-      <td><span class="status-pill ${entry.status.toLowerCase().replace(' ', '-')}">${entry.status}</span></td>
-      <td>
-        <div class="roster-controls">
-          <button data-player-id="${entry.playerId}" data-team-id="${state.selectedTeamId}" class="${entry.status === 'Starter' ? 'active' : ''}" data-status="Starter">Starter</button>
-          <button data-player-id="${entry.playerId}" data-team-id="${state.selectedTeamId}" class="${entry.status === 'Bench' ? 'active' : ''}" data-status="Bench">Bench</button>
-          <button data-player-id="${entry.playerId}" data-team-id="${state.selectedTeamId}" class="${entry.status === 'IR' ? 'active' : ''}" data-status="IR">IR</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  rosterBody.innerHTML = roster.map((entry) => {
+    const isTaken = state.draftOwnership[String(entry.playerId)] === true;
+    const rowClass = isTaken ? 'draft-taken-row' : '';
+
+    return `
+      <tr class="${rowClass}">
+        <td><strong class="${isTaken ? 'crossed-out' : ''}">${entry.name}</strong></td>
+        <td>${entry.position}</td>
+        <td>${entry.playerId}</td>
+        <td><span class="status-pill ${entry.status.toLowerCase().replace(' ', '-')}">${entry.status}</span></td>
+        <td>
+          <div class="roster-controls">
+            <button data-player-id="${entry.playerId}" data-team-id="${state.selectedTeamId}" class="${entry.status === 'Starter' ? 'active' : ''}" data-status="Starter">Starter</button>
+            <button data-player-id="${entry.playerId}" data-team-id="${state.selectedTeamId}" class="${entry.status === 'Bench' ? 'active' : ''}" data-status="Bench">Bench</button>
+            <button data-player-id="${entry.playerId}" data-team-id="${state.selectedTeamId}" class="${entry.status === 'IR' ? 'active' : ''}" data-status="IR">IR</button>
+            <button data-player-id="${entry.playerId}" data-team-id="${state.selectedTeamId}" class="${isTaken ? 'active' : ''}" data-status="taken">${isTaken ? 'Taken' : 'Mark taken'}</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function renderMatchups() {
@@ -288,15 +356,36 @@ function bindEvents() {
     const roster = state.rosterByTeam[teamId] || [];
     const target = roster.find((entry) => entry.playerId === playerId);
     if (!target) return;
+
+    if (nextStatus === 'taken') {
+      const nextTaken = !(state.draftOwnership[String(playerId)] === true);
+      state.draftOwnership[String(playerId)] = nextTaken;
+      saveDraftOwnership(playerId, nextTaken).then(() => renderRosters());
+      return;
+    }
+
     target.status = nextStatus;
     renderRosters();
   });
 
   document.getElementById('sync-stats-button').addEventListener('click', () => {
     document.getElementById('sync-status').textContent = 'Sync started...';
-    setTimeout(() => {
+    loadPlayersFromApi().then(() => {
       document.getElementById('sync-status').textContent = 'Last synced: just now';
-    }, 600);
+    }).catch(() => {
+      document.getElementById('sync-status').textContent = 'Sync failed. Using local snapshot.';
+    });
+  });
+
+  document.getElementById('refresh-sleeper-button').addEventListener('click', () => {
+    const button = document.getElementById('refresh-sleeper-button');
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'Refreshing...';
+    loadPlayersFromApi().finally(() => {
+      button.disabled = false;
+      button.textContent = 'Refresh Sleeper data';
+    });
   });
 
   document.getElementById('lock-week-button').addEventListener('click', () => {
@@ -308,7 +397,7 @@ function init() {
   initRosterState();
   bindEvents();
   document.getElementById('matchup-week-select').value = String(state.selectedWeek);
-  Promise.all([loadPlayersFromApi()]).then(() => {
+  Promise.all([loadDraftOwnership(), loadPlayersFromApi()]).then(() => {
     renderDashboard();
     renderRosters();
     renderMatchups();
