@@ -97,7 +97,7 @@ function loadTeamsFromSheet() {
 
       state.teams = rows.map((team, index) => ({
         id: Number(team.id || index + 1),
-        name: String(team.name || team.team_name || team[1] || defaultTeamNames[index] || `Team ${index + 1}`),
+        name: String(team.name || team.team_name || defaultTeamNames[index] || `Team ${index + 1}`),
         manager: team.manager || `Manager ${index + 1}`
       }));
 
@@ -263,13 +263,34 @@ function renderDashboard() {
     `;
   }).join('');
 
-  const draftPreview = document.getElementById('draft-preview');
-  draftPreview.innerHTML = state.draftOrder[0].map((teamId, idx) => `
-    <div class="pick-box">
-      <label>Pick ${idx + 1}</label>
-      <strong>${getTeamName(teamId)}</strong>
+  const leaguePulse = document.getElementById('league-pulse');
+  const pulseTeams = standings.slice(0, 3).map((team) => ({
+    name: team.name,
+    score: team.total,
+    rank: standings.indexOf(team) + 1
+  }));
+
+  leaguePulse.innerHTML = pulseTeams.map((team) => `
+    <div class="matchup-item">
+      <div>
+        <strong>#${team.rank} ${team.name}</strong>
+      </div>
+      <div class="score-tag winner">${formatScore(team.score)}</div>
     </div>
   `).join('');
+
+  const teamMomentum = document.getElementById('team-momentum');
+  teamMomentum.innerHTML = standings.slice(0, 4).map((team, index) => {
+    const momentumScore = 120 + (standings.length - index) * 5;
+    return `
+      <div class="matchup-item">
+        <div>
+          <strong>${team.name}</strong>
+        </div>
+        <div class="score-tag ${index === 0 ? 'winner' : ''}">${formatScore(momentumScore)}</div>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderRosters() {

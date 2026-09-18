@@ -59,7 +59,9 @@ function getTeamRows() {
   const values = sheet.getDataRange().getValues();
   const rows = [];
 
-  for (let i = 1; i < values.length; i += 1) {
+  if (!values.length) return rows;
+
+  for (let i = 0; i < values.length; i += 1) {
     const row = values[i];
     if (!row || row.every((cell) => String(cell || '').trim() === '')) continue;
 
@@ -68,11 +70,12 @@ function getTeamRows() {
 
     rows.push({
       id: i,
-      name: String(teamName).trim()
+      name: String(teamName).trim(),
+      manager: row[2] ? String(row[2]).trim() : ''
     });
   }
 
-  return rows;
+  return rows.filter((row) => row.name);
 }
 
 function writeOwnershipRow(sheetName, playerId, taken, updatedAt) {
