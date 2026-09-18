@@ -123,6 +123,73 @@ function loadTeamsFromSheet() {
     .catch(() => state.teams);
 }
 
+function loadRostersFromSheet() {
+  if (!GOOGLE_APPS_SCRIPT_URL) return Promise.resolve();
+
+  return fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=Rosters`, { cache: 'no-store' })
+    .then((response) => {
+      if (!response.ok) throw new Error('Unable to load roster data');
+      return response.json();
+    })
+    .then((payload) => {
+      const rows = Array.isArray(payload && payload.rows) ? payload.rows : [];
+      if (!rows.length) return;
+
+      const teamIdsByName = {};
+      state.teams.forEach((team) => {
+        teamIdsByName[team.name.toLowerCase()] = team.id;
+      });
+
+      const nextRosterByTeam = {};
+      state.teams.forEach((team) => {
+        nextRosterByTeam[team.id] = [];
+      });
+
+      rows.forEach((row) => {
+        const teamName = String(row.team_name || row.team || row.name || '').trim();
+        const playerName = String(row.player_name || row.player || row.name || '').trim();
+        const position = String(row.position || row.pos || 'N/A').trim();
+        const status = String(row.status || row.slot || 'Bench').trim() || 'Bench';
+        const playerId = String(row.player_id || row.playerId || `${playerName}-${teamName}` || '').trim();
+
+        if (!teamName || !playerName) return;
+
+        const normalizedKey = teamName.toLowerCase();
+        const teamId = teamIdsByName[normalizedKey] || state.selectedTeamId || 1;
+
+        const nextEntry = {
+          playerId,
+          name: playerName,
+          position,
+          status: status === 'Starter' || status === 'Bench' || status === 'IR' ? status : 'Bench'
+        };
+
+        if (!nextRosterByTeam[teamId]) {
+          nextRosterByTeam[teamId] = [];
+        }
+
+        const existingIndex = nextRosterByTeam[teamId].findIndex((entry) => entry.playerId === playerId || entry.name === playerName);
+        if (existingIndex >= 0) {
+          nextRosterByTeam[teamId][existingIndex] = nextEntry;
+        } else {
+          nextRosterByTeam[teamId].push(nextEntry);
+        }
+      });
+
+      state.rosterByTeam = nextRosterByTeam;
+      state.teams.forEach((team) => {
+        state.rosterOrderByTeam[team.id] = (state.rosterByTeam[team.id] || []).map((entry, index) => index + 1);
+      });
+    })
+    .catch(() => {
+      state.teams.forEach((team) => {
+        const roster = buildDefaultRoster(team.id);
+        state.rosterByTeam[team.id] = roster;
+        state.rosterOrderByTeam[team.id] = roster.map((entry, index) => index + 1);
+      });
+    });
+}
+
 function loadDraftOwnership() {
   if (!GOOGLE_APPS_SCRIPT_URL) return Promise.resolve([]);
 
@@ -465,11 +532,13 @@ function init() {
   bindEvents();
   document.getElementById('matchup-week-select').value = String(state.selectedWeek);
   Promise.all([loadTeamsFromSheet(), loadDraftOwnership(), loadPlayersFromApi()]).then(() => {
-    renderDashboard();
-    renderRosters();
-    renderMatchups();
-    renderDraftUI();
-    setActiveTab('dashboard');
+    return loadRostersFromSheet().finally(() => {
+      renderDashboard();
+      renderRosters();
+      renderMatchups();
+      renderDraftUI();
+      setActiveTab('dashboard');
+    });
   });
 }
 

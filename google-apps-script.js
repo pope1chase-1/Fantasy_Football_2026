@@ -1,6 +1,6 @@
 function doGet(e) {
   const sheetName = (e && e.parameter && e.parameter.sheet) || 'RosterOwnership';
-  const rows = sheetName === 'Teams' ? getTeamRows() : getSheetRows(sheetName);
+  const rows = sheetName === 'Teams' ? getTeamRows() : sheetName === 'Rosters' ? getRosterRows() : getSheetRows(sheetName);
   return ContentService.createTextOutput(JSON.stringify({ rows: rows }))
     .setMimeType(ContentService.MimeType.JSON);
 }
@@ -16,7 +16,7 @@ function doPost(e) {
   }
 
   if (action === 'read') {
-    const rows = sheetName === 'Teams' ? getTeamRows() : getSheetRows(sheetName);
+    const rows = sheetName === 'Teams' ? getTeamRows() : sheetName === 'Rosters' ? getRosterRows() : getSheetRows(sheetName);
     return ContentService.createTextOutput(JSON.stringify({ rows: rows }))
       .setMimeType(ContentService.MimeType.JSON);
   }
@@ -76,6 +76,43 @@ function getTeamRows() {
   }
 
   return rows.filter((row) => row.name);
+}
+
+function getRosterRows() {
+  const sheet = getSheet('Rosters');
+  const values = sheet.getDataRange().getValues();
+  const rows = [];
+
+  if (!values.length) return rows;
+
+  const headers = values[0].map((value) => String(value || '').trim().toLowerCase());
+  const teamIndex = headers.indexOf('team') !== -1 ? headers.indexOf('team') : headers.indexOf('team name');
+  const teamNameIndex = headers.indexOf('team_name') !== -1 ? headers.indexOf('team_name') : headers.indexOf('team name');
+  const playerNameIndex = headers.indexOf('player') !== -1 ? headers.indexOf('player') : headers.indexOf('player name');
+  const playerIdIndex = headers.indexOf('player_id') !== -1 ? headers.indexOf('player_id') : headers.indexOf('player id');
+  const positionIndex = headers.indexOf('position') !== -1 ? headers.indexOf('position') : headers.indexOf('pos');
+  const statusIndex = headers.indexOf('status') !== -1 ? headers.indexOf('status') : headers.indexOf('slot');
+
+  for (let i = 1; i < values.length; i += 1) {
+    const row = values[i];
+    if (!row || row.every((cell) => String(cell || '').trim() === '')) continue;
+
+    const teamValue = teamNameIndex !== -1 ? row[teamNameIndex] : teamIndex !== -1 ? row[teamIndex] : '';
+    const playerName = playerNameIndex !== -1 ? row[playerNameIndex] : row[0];
+    if (!teamValue && !playerName) continue;
+
+    rows.push({
+      team: String(teamValue || '').trim(),
+      team_name: String(teamValue || '').trim(),
+      player_name: String(playerName || '').trim(),
+      player: String(playerName || '').trim(),
+      player_id: playerIdIndex !== -1 ? String(row[playerIdIndex] || '').trim() : String(playerName || '').trim(),
+      position: positionIndex !== -1 ? String(row[positionIndex] || '').trim() : 'N/A',
+      status: statusIndex !== -1 ? String(row[statusIndex] || '').trim() : 'Bench'
+    });
+  }
+
+  return rows.filter((row) => row.player_name || row.player_id || row.player);
 }
 
 function writeOwnershipRow(sheetName, playerId, taken, updatedAt) {
