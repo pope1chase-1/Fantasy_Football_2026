@@ -513,13 +513,29 @@ function bindEvents() {
 
   document.getElementById('refresh-sleeper-button').addEventListener('click', () => {
     const button = document.getElementById('refresh-sleeper-button');
+    const status = document.getElementById('sync-status');
     if (!button) return;
     button.disabled = true;
     button.textContent = 'Refreshing...';
-    loadPlayersFromApi().finally(() => {
-      button.disabled = false;
-      button.textContent = 'Refresh Sleeper data';
-    });
+    if (status) {
+      status.textContent = 'Refreshing live Sleeper data...';
+    }
+
+    loadPlayersFromApi()
+      .then(() => {
+        if (status) {
+          status.textContent = 'Live Sleeper data refreshed in this browser session.';
+        }
+      })
+      .catch(() => {
+        if (status) {
+          status.textContent = 'Refresh failed. Using the local snapshot instead.';
+        }
+      })
+      .finally(() => {
+        button.disabled = false;
+        button.textContent = 'Refresh Sleeper data';
+      });
   });
 
   document.getElementById('lock-week-button').addEventListener('click', () => {

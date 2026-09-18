@@ -34,6 +34,8 @@ npm run refresh-players
 
 This fetches the live NFL player list from the Sleeper API and overwrites the local JSON file used by the dashboard.
 
+A GitHub Actions workflow is also included in `.github/workflows/refresh-sleeper-data.yml` to refresh the snapshot automatically on a schedule and via manual dispatch.
+
 ## Notes
 
 This is a static front-end project designed to run locally or on GitHub Pages without a backend.
