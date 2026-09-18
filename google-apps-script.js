@@ -1,27 +1,31 @@
-function doGet() {
-  return ContentService.createTextOutput(JSON.stringify({ rows: getDraftRows() }))
+function doGet(e) {
+  const sheetName = (e && e.parameter && e.parameter.sheet) || 'RosterOwnership';
+  const rows = sheetName === 'Teams' ? getTeamRows() : getSheetRows(sheetName);
+  return ContentService.createTextOutput(JSON.stringify({ rows: rows }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
   const payload = JSON.parse(e.postData.contents || '{}');
   const action = payload.action || 'upsert';
+  const sheetName = payload.sheet || 'RosterOwnership';
 
   if (action === 'upsert') {
-    writeDraftRow(payload.player_id, payload.taken === true, payload.updated_at || new Date().toISOString());
-    return ContentService.createTextOutput(JSON.stringify({ ok: true }));
+    writeOwnershipRow(sheetName, payload.player_id, payload.taken === true, payload.updated_at || new Date().toISOString());
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, sheet: sheetName }));
   }
 
   if (action === 'read') {
-    return ContentService.createTextOutput(JSON.stringify({ rows: getDraftRows() }))
+    const rows = sheetName === 'Teams' ? getTeamRows() : getSheetRows(sheetName);
+    return ContentService.createTextOutput(JSON.stringify({ rows: rows }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
   return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Unsupported action' }));
 }
 
-function getDraftRows() {
-  const sheet = getDraftSheet();
+function getSheetRows(sheetName) {
+  const sheet = getSheet(sheetName);
   const values = sheet.getDataRange().getValues();
 
   if (values.length < 2) {
@@ -50,8 +54,29 @@ function getDraftRows() {
   return rows.filter((row) => row.player_id);
 }
 
-function writeDraftRow(playerId, taken, updatedAt) {
-  const sheet = getDraftSheet();
+function getTeamRows() {
+  const sheet = getSheet('Teams');
+  const values = sheet.getDataRange().getValues();
+  const rows = [];
+
+  for (let i = 1; i < values.length; i += 1) {
+    const row = values[i];
+    if (!row || row.every((cell) => String(cell || '').trim() === '')) continue;
+
+    const teamName = row[1];
+    if (teamName === undefined || String(teamName).trim() === '') continue;
+
+    rows.push({
+      id: i,
+      name: String(teamName).trim()
+    });
+  }
+
+  return rows;
+}
+
+function writeOwnershipRow(sheetName, playerId, taken, updatedAt) {
+  const sheet = getSheet(sheetName);
   const values = sheet.getDataRange().getValues();
 
   if (!values.length) {
@@ -65,7 +90,7 @@ function writeDraftRow(playerId, taken, updatedAt) {
 
   if (playerIdIndex === -1) {
     sheet.appendRow(['player_id', 'taken', 'updated_at']);
-    return writeDraftRow(playerId, taken, updatedAt);
+    return writeOwnershipRow(sheetName, playerId, taken, updatedAt);
   }
 
   let foundRow = -1;
@@ -90,12 +115,24 @@ function writeDraftRow(playerId, taken, updatedAt) {
   }
 }
 
-function getDraftSheet() {
+function getSheet(sheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('DraftOwnership');
+  let sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
-    sheet = ss.insertSheet('DraftOwnership');
-    sheet.appendRow(['player_id', 'taken', 'updated_at']);
+    sheet = ss.insertSheet(sheetName);
+    if (sheetName === 'Teams') {
+      sheet.appendRow(['Team ID', 'Team Name', 'Manager']);
+    } else {
+      sheet.appendRow(['player_id', 'taken', 'updated_at']);
+    }
   }
   return sheet;
+}
+
+function getDraftRows() {
+  return getSheetRows('DraftOwnership');
+}
+
+function writeDraftRow(playerId, taken, updatedAt) {
+  return writeOwnershipRow('DraftOwnership', playerId, taken, updatedAt);
 }

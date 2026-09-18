@@ -1,4 +1,4 @@
-const teamNames = [
+const defaultTeamNames = [
   'Team 1', 'Team 2', 'Team 3', 'Team 4',
   'Team 5', 'Team 6', 'Team 7', 'Team 8'
 ];
@@ -9,7 +9,7 @@ const GOOGLE_APPS_SCRIPT_URL = config.googleAppsScriptUrl || '';
 const state = {
   currentTab: 'dashboard',
   week: 1,
-  teams: teamNames.map((name, index) => ({
+  teams: defaultTeamNames.map((name, index) => ({
     id: index + 1,
     name,
     manager: `Manager ${index + 1}`
@@ -83,12 +83,42 @@ function normalizePlayerPayload(data) {
   });
 }
 
+function loadTeamsFromSheet() {
+  if (!GOOGLE_APPS_SCRIPT_URL) return Promise.resolve(state.teams);
+
+  return fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=Teams`, { cache: 'no-store' })
+    .then((response) => {
+      if (!response.ok) throw new Error('Unable to load team names');
+      return response.json();
+    })
+    .then((payload) => {
+      const rows = Array.isArray(payload && payload.rows) ? payload.rows : [];
+      if (!rows.length) return state.teams;
+
+      state.teams = rows.map((team, index) => ({
+        id: Number(team.id || index + 1),
+        name: String(team.name || team.team_name || team[1] || defaultTeamNames[index] || `Team ${index + 1}`),
+        manager: team.manager || `Manager ${index + 1}`
+      }));
+
+      state.rosterByTeam = {};
+      state.teams.forEach((team) => {
+        if (!state.rosterByTeam[team.id]) {
+          state.rosterByTeam[team.id] = [];
+        }
+      });
+
+      return state.teams;
+    })
+    .catch(() => state.teams);
+}
+
 function loadDraftOwnership() {
   if (!GOOGLE_APPS_SCRIPT_URL) return Promise.resolve([]);
 
-  return fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=read`, { cache: 'no-store' })
+  return fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=RosterOwnership`, { cache: 'no-store' })
     .then((response) => {
-      if (!response.ok) throw new Error('Unable to load draft ownership');
+      if (!response.ok) throw new Error('Unable to load live roster ownership');
       return response.json();
     })
     .then((payload) => {
@@ -112,7 +142,13 @@ function saveDraftOwnership(playerId, taken) {
   return fetch(GOOGLE_APPS_SCRIPT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'upsert', player_id: String(playerId), taken, updated_at: new Date().toISOString() })
+    body: JSON.stringify({
+      action: 'upsert',
+      sheet: 'RosterOwnership',
+      player_id: String(playerId),
+      taken,
+      updated_at: new Date().toISOString()
+    })
   }).then((response) => response.ok).catch(() => false);
 }
 
@@ -397,7 +433,7 @@ function init() {
   initRosterState();
   bindEvents();
   document.getElementById('matchup-week-select').value = String(state.selectedWeek);
-  Promise.all([loadDraftOwnership(), loadPlayersFromApi()]).then(() => {
+  Promise.all([loadTeamsFromSheet(), loadDraftOwnership(), loadPlayersFromApi()]).then(() => {
     renderDashboard();
     renderRosters();
     renderMatchups();
