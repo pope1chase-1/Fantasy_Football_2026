@@ -39,28 +39,36 @@ const state = {
   rosterOrderByTeam: {}
 };
 
+function buildDefaultRoster(teamId) {
+  const roster = [
+    { playerId: 'qb-1', name: 'Patrick Mahomes', position: 'QB', status: 'Starter' },
+    { playerId: 'rb-1', name: 'Christian McCaffrey', position: 'RB', status: 'Starter' },
+    { playerId: 'rb-2', name: 'Breece Hall', position: 'RB', status: 'Starter' },
+    { playerId: 'wr-1', name: 'A.J. Brown', position: 'WR', status: 'Starter' },
+    { playerId: 'wr-2', name: 'Puka Nacua', position: 'WR', status: 'Starter' },
+    { playerId: 'te-1', name: 'Sam LaPorta', position: 'TE', status: 'Starter' },
+    { playerId: 'flex-1', name: 'Joe Mixon', position: 'RB', status: 'Starter' },
+    { playerId: 'flex-2', name: 'Deebo Samuel', position: 'WR', status: 'Starter' },
+    { playerId: 'flex-3', name: 'T.J. Hockenson', position: 'TE', status: 'Starter' },
+    { playerId: 'bench-1', name: 'Tank Dell', position: 'WR', status: 'Bench' },
+    { playerId: 'bench-2', name: 'Kyren Williams', position: 'RB', status: 'Bench' },
+    { playerId: 'bench-3', name: 'Jalen Tolbert', position: 'WR', status: 'Bench' },
+    { playerId: 'bench-4', name: 'Juwan Johnson', position: 'TE', status: 'Bench' },
+    { playerId: 'bench-5', name: 'Jerome Ford', position: 'RB', status: 'Bench' },
+    { playerId: 'bench-6', name: 'Rachaad White', position: 'RB', status: 'Bench' },
+    { playerId: 'bench-7', name: 'Jaylen Waddle', position: 'WR', status: 'Bench' },
+    { playerId: 'bench-8', name: 'David Njoku', position: 'TE', status: 'Bench' },
+    { playerId: `team-${teamId}-ir`, name: 'Injury Placeholder', position: 'RB', status: 'IR' }
+  ];
+
+  return roster;
+}
+
 function initRosterState() {
+  state.rosterByTeam = {};
+  state.rosterOrderByTeam = {};
   state.teams.forEach((team) => {
-    const roster = [
-      { playerId: 'qb-1', name: 'Patrick Mahomes', position: 'QB', status: 'Starter' },
-      { playerId: 'rb-1', name: 'Christian McCaffrey', position: 'RB', status: 'Starter' },
-      { playerId: 'rb-2', name: 'Breece Hall', position: 'RB', status: 'Starter' },
-      { playerId: 'wr-1', name: 'A.J. Brown', position: 'WR', status: 'Starter' },
-      { playerId: 'wr-2', name: 'Puka Nacua', position: 'WR', status: 'Starter' },
-      { playerId: 'te-1', name: 'Sam LaPorta', position: 'TE', status: 'Starter' },
-      { playerId: 'flex-1', name: 'Joe Mixon', position: 'RB', status: 'Starter' },
-      { playerId: 'flex-2', name: 'Deebo Samuel', position: 'WR', status: 'Starter' },
-      { playerId: 'flex-3', name: 'T.J. Hockenson', position: 'TE', status: 'Starter' },
-      { playerId: 'bench-1', name: 'Tank Dell', position: 'WR', status: 'Bench' },
-      { playerId: 'bench-2', name: 'Kyren Williams', position: 'RB', status: 'Bench' },
-      { playerId: 'bench-3', name: 'Jalen Tolbert', position: 'WR', status: 'Bench' },
-      { playerId: 'bench-4', name: 'Juwan Johnson', position: 'TE', status: 'Bench' },
-      { playerId: 'bench-5', name: 'Jerome Ford', position: 'RB', status: 'Bench' },
-      { playerId: 'bench-6', name: 'Rachaad White', position: 'RB', status: 'Bench' },
-      { playerId: 'bench-7', name: 'Jaylen Waddle', position: 'WR', status: 'Bench' },
-      { playerId: 'bench-8', name: 'David Njoku', position: 'TE', status: 'Bench' },
-      { playerId: `team-${team.id}-ir`, name: 'Injury Placeholder', position: 'RB', status: 'IR' }
-    ];
+    const roster = buildDefaultRoster(team.id);
     state.rosterByTeam[team.id] = roster;
     state.rosterOrderByTeam[team.id] = roster.map((entry, index) => index + 1);
   });
@@ -101,11 +109,13 @@ function loadTeamsFromSheet() {
         manager: team.manager || `Manager ${index + 1}`
       }));
 
+      const existing = state.rosterByTeam || {};
       state.rosterByTeam = {};
+      state.rosterOrderByTeam = {};
       state.teams.forEach((team) => {
-        if (!state.rosterByTeam[team.id]) {
-          state.rosterByTeam[team.id] = [];
-        }
+        const roster = existing[team.id] && existing[team.id].length ? existing[team.id] : buildDefaultRoster(team.id);
+        state.rosterByTeam[team.id] = roster;
+        state.rosterOrderByTeam[team.id] = roster.map((entry, index) => index + 1);
       });
 
       return state.teams;
