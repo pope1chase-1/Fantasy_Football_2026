@@ -3,1011 +3,189 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>The Manning vs. Brady Draft Grudge Match</title>
-    <style>
-      :root {
-        --bg: #07111d;
-        --bg-soft: #0d1a2b;
-        --panel: rgba(13, 25, 39, 0.92);
-        --panel-alt: rgba(18, 33, 48, 0.9);
-        --panel-strong: #112235;
-        --text: #edf6ff;
-        --muted: #9badc7;
-        --border: rgba(148, 163, 184, 0.18);
-        --broncos: #f97316;
-        --patriots: #0ea5e9;
-        --good: #34d399;
-        --warn: #fbbf24;
-        --bad: #f87171;
-        --shadow: rgba(15, 23, 42, 0.45);
-      }
-
-      * { box-sizing: border-box; }
-
-      html, body {
-        margin: 0;
-        padding: 0;
-        background:
-          radial-gradient(circle at top left, rgba(14, 165, 233, 0.15), transparent 28%),
-          radial-gradient(circle at top right, rgba(249, 115, 22, 0.18), transparent 26%),
-          linear-gradient(180deg, var(--bg), #020914 70%);
-        color: var(--text);
-        font-family: Inter, "Segoe UI", sans-serif;
-      }
-
-      body { min-height: 100vh; }
-
-      .container {
-        max-width: 1500px;
-        margin: 0 auto;
-        padding: 28px 20px 40px;
-      }
-
-      .hero {
-        display: flex;
-        justify-content: space-between;
-        align-items: end;
-        gap: 20px;
-        flex-wrap: wrap;
-        background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(249, 115, 22, 0.12));
-        border: 1px solid var(--border);
-        border-radius: 22px;
-        padding: 24px 26px;
-        box-shadow: 0 14px 40px var(--shadow);
-        margin-bottom: 20px;
-      }
-
-      .eyebrow {
-        display: inline-flex;
-        padding: 6px 10px;
-        border-radius: 999px;
-        background: rgba(15, 118, 110, 0.12);
-        border: 1px solid rgba(52, 211, 153, 0.2);
-        color: #b6f7d7;
-        font-size: 0.72rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        font-weight: 700;
-        margin-bottom: 10px;
-      }
-
-      h1 {
-        margin: 0;
-        font-size: clamp(2rem, 3vw, 3.2rem);
-        line-height: 1.05;
-      }
-
-      .subtitle {
-        margin-top: 10px;
-        color: var(--muted);
-        font-size: 1rem;
-      }
-
-      .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 16px;
-        margin: 20px 0;
-      }
-
-      .stat-card {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 18px;
-        box-shadow: 0 10px 28px rgba(2, 6, 23, 0.22);
-      }
-
-      .stat-label {
-        display: block;
-        font-size: 0.72rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--muted);
-        margin-bottom: 10px;
-      }
-
-      .stat-value {
-        font-weight: 800;
-        font-size: clamp(1.8rem, 2vw, 2.4rem);
-      }
-
-      .controls {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 18px;
-        margin-bottom: 18px;
-        box-shadow: 0 10px 30px rgba(2, 6, 23, 0.2);
-      }
-
-      .control-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 14px;
-        align-items: end;
-      }
-
-      label {
-        display: block;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: var(--muted);
-        margin-bottom: 8px;
-      }
-
-      input, select, button {
-        width: 100%;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: rgba(11, 18, 32, 0.9);
-        color: var(--text);
-        padding: 10px 12px;
-        font-size: 0.96rem;
-      }
-
-      input::placeholder { color: #7a8ca8; }
-
-      button {
-        cursor: pointer;
-        background: linear-gradient(135deg, var(--broncos), #fb7185);
-        border: none;
-        font-weight: 800;
-        transition: transform 0.15s ease, filter 0.15s ease;
-      }
-
-      button:hover {
-        filter: brightness(1.08);
-        transform: translateY(-1px);
-      }
-
-      .secondary-button {
-        background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(59, 130, 246, 0.28));
-        border: 1px solid rgba(56, 189, 248, 0.25);
-      }
-
-      .sync-box {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-top: 12px;
-        padding: 12px 14px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: rgba(9, 15, 27, 0.8);
-      }
-
-      .sync-box strong { color: var(--text); }
-
-      .code-note {
-        font-size: 0.9rem;
-        color: var(--muted);
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 8px 10px;
-        font-family: ui-monospace, SFMono-Regular, monospace;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: rgba(9, 15, 27, 0.9);
-        border-radius: 18px;
-        overflow: hidden;
-        border: 1px solid var(--border);
-      }
-
-      thead th {
-        text-align: left;
-        background: rgba(17, 25, 38, 0.98);
-        color: var(--muted);
-        font-weight: 800;
-        font-size: 0.72rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        padding: 14px 12px;
-        border-bottom: 1px solid var(--border);
-      }
-
-      tbody td {
-        border-bottom: 1px solid var(--border);
-        padding: 12px;
-        vertical-align: middle;
-      }
-
-      tbody tr:hover { background: rgba(59, 130, 246, 0.06); }
-      tbody tr.taken { opacity: 0.68; }
-      tbody tr.taken td:first-child strong {
-        text-decoration: line-through;
-        text-decoration-thickness: 2px;
-        text-decoration-color: rgba(248, 113, 113, 0.9);
-      }
-
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 84px;
-        border-radius: 999px;
-        padding: 6px 10px;
-        font-size: 0.73rem;
-        font-weight: 800;
-      }
-
-      .pill.injured {
-        background: rgba(248, 113, 113, 0.12);
-        color: #fecaca;
-        border: 1px solid rgba(248, 113, 113, 0.4);
-      }
-
-      .pill.healthy {
-        background: rgba(52, 211, 153, 0.1);
-        color: #bbf7d0;
-        border: 1px solid rgba(52, 211, 153, 0.4);
-      }
-
-      .pill.rank {
-        background: rgba(56, 189, 248, 0.14);
-        color: #bae6fd;
-        border: 1px solid rgba(56, 189, 248, 0.35);
-      }
-
-      .draft-toggle {
-        min-width: 100px;
-        padding: 8px 10px;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(59, 130, 246, 0.22));
-        border: 1px solid rgba(56, 189, 248, 0.26);
-      }
-
-      .draft-toggle.taken-button {
-        background: linear-gradient(135deg, rgba(248, 113, 113, 0.16), rgba(244, 63, 94, 0.28));
-        border: 1px solid rgba(248, 113, 113, 0.25);
-      }
-
-      .empty-state {
-        display: none;
-        text-align: center;
-        padding: 40px 20px;
-        color: var(--muted);
-        background: rgba(17, 24, 39, 0.9);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-      }
-
-      .empty-state.visible { display: block; }
-
-      @media (max-width: 760px) {
-        .container { padding: 16px 12px 32px; }
-        .hero { padding: 18px; }
-        th:nth-child(4), td:nth-child(4), th:nth-child(6), td:nth-child(6), th:nth-child(7), td:nth-child(7) {
-          display: none;
-        }
-      }
-    </style>
+    <title>Fantasy League Tracker</title>
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="container">
-      <header class="hero">
-        <div>
-          <div class="eyebrow">Legacy Grudge Match</div>
-          <h1>The Manning vs. Brady Draft Grudge Match</h1>
-          <div class="subtitle">One board, one rivalry, and a whole lot of bad blood. Mark the players already taken and keep the draft chaos in check.</div>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <div class="brand-mark">FL</div>
+          <div>
+            <small>League Dashboard</small>
+            <h1>Fantasy League Tracker</h1>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost" type="button">Week 1</button>
+          <button class="primary" type="button">Refresh Data</button>
         </div>
       </header>
 
-      <div class="summary-grid">
-        <div class="stat-card">
-          <span class="stat-label">Players</span>
-          <div id="statPlayers" class="stat-value">0</div>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Available</span>
-          <div id="statAvailable" class="stat-value">0</div>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Taken</span>
-          <div id="statTaken" class="stat-value">0</div>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Injured</span>
-          <div id="statInjured" class="stat-value">0</div>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">2026 ranks</span>
-          <div id="statRanked" class="stat-value">0</div>
-        </div>
-      </div>
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="dashboard" type="button">Dashboard</button>
+        <button class="nav-tab" data-tab="rosters" type="button">Rosters</button>
+        <button class="nav-tab" data-tab="matchups" type="button">Matchups</button>
+        <button class="nav-tab" data-tab="draft" type="button">Draft</button>
+        <button class="nav-tab" data-tab="admin" type="button">Admin</button>
+      </nav>
 
-      <div class="controls">
-        <div class="control-grid">
-          <div>
-            <label for="searchInput">Search player</label>
-            <input id="searchInput" type="text" placeholder="Search name, team, position..." />
+      <main>
+        <section class="page active" data-page="dashboard">
+          <div class="summary-grid">
+            <div class="metric-card">
+              <div class="label">Total players</div>
+              <div id="dashboard-total-players" class="value">0</div>
+            </div>
+            <div class="metric-card">
+              <div class="label">Starters</div>
+              <div id="dashboard-starters" class="value">0</div>
+            </div>
+            <div class="metric-card">
+              <div class="label">Bench</div>
+              <div id="dashboard-bench" class="value">0</div>
+            </div>
+            <div class="metric-card">
+              <div class="label">Matchups</div>
+              <div id="dashboard-matchups" class="value">0</div>
+            </div>
+            <div class="metric-card">
+              <div class="label">Avg score</div>
+              <div id="dashboard-score" class="value">0.0</div>
+            </div>
           </div>
-          <div>
-            <label for="positionFilter">Position</label>
-            <select id="positionFilter"><option value="all">All positions</option></select>
-          </div>
-          <div>
-            <label for="teamFilter">Team</label>
-            <select id="teamFilter"><option value="all">All teams</option></select>
-          </div>
-          <div>
-            <label for="injuryFilter">Injury</label>
-            <select id="injuryFilter">
-              <option value="all">All players</option>
-              <option value="injured">Injured</option>
-              <option value="healthy">Healthy / active</option>
-              <option value="unknown">Unknown</option>
-            </select>
-          </div>
-          <div>
-            <label for="rankFilter">2026 rank</label>
-            <select id="rankFilter">
-              <option value="all">All players</option>
-              <option value="ranked">Ranked players only</option>
-              <option value="unranked">Unranked only</option>
-            </select>
-          </div>
-          <div>
-            <label for="draftFilter">Draft status</label>
-            <select id="draftFilter">
-              <option value="all">All players</option>
-              <option value="available">Available only</option>
-              <option value="taken">Taken only</option>
-            </select>
-          </div>
-          <div>
-            <label>&nbsp;</label>
-            <button id="resetButton" type="button" class="secondary-button">Reset filters</button>
-          </div>
-          <div>
-            <label>&nbsp;</label>
-            <button id="refreshButton" type="button">Refresh API data</button>
-          </div>
-        </div>
 
-        <div class="sync-box">
-          <strong>Draft sync:</strong>
-          <span id="syncStatus">Local browser only</span>
-          <span class="code-note">Supabase project keys are configured for live shared editing.</span>
-        </div>
-      </div>
+          <div class="grid-2">
+            <div class="card">
+              <h3>Standings</h3>
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Team</th>
+                      <th>Score</th>
+                    </tr>
+                  </thead>
+                  <tbody id="standings-table-body"></tbody>
+                </table>
+              </div>
+            </div>
 
-      <div id="emptyState" class="empty-state">No players match the current filters.</div>
+            <div class="card">
+              <h3>Matchup slate</h3>
+              <div id="matchup-list" class="matchup-list"></div>
+            </div>
+          </div>
 
-      <div style="overflow:auto; border-radius:18px; border:1px solid var(--border); background:rgba(9,15,27,0.9);">
-        <table>
-          <thead>
-            <tr>
-              <th>Player</th>
-              <th>ID</th>
-              <th>Team</th>
-              <th>Position</th>
-              <th>Status</th>
-              <th>Injured</th>
-              <th>2026 rank</th>
-              <th>Drafted</th>
-            </tr>
-          </thead>
-          <tbody id="playerTableBody"></tbody>
-        </table>
-      </div>
+          <div class="card" style="margin-top: 18px;">
+            <h3>Draft order preview</h3>
+            <div id="draft-preview" class="draft-grid"></div>
+          </div>
+        </section>
+
+        <section class="page" data-page="rosters">
+          <div class="toolbar">
+            <select id="roster-team-select"></select>
+          </div>
+
+          <div class="card">
+            <h3>Roster management</h3>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Position</th>
+                    <th>Player ID</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="roster-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" data-page="matchups">
+          <div class="toolbar">
+            <label for="matchup-week-select" style="display:flex; align-items:center; gap:8px; color: var(--muted);">
+              Week
+              <select id="matchup-week-select">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Weekly matchup results</h3>
+            <div id="matchup-detail-list" class="matchup-list"></div>
+          </div>
+        </section>
+
+        <section class="page" data-page="draft">
+          <div class="toolbar">
+            <strong id="round-label">Draft rounds</strong>
+          </div>
+
+          <div class="card">
+            <h3>Snake draft order</h3>
+            <div id="draft-grid" class="draft-grid"></div>
+          </div>
+
+          <div class="card team-history" style="margin-top: 18px;">
+            <h3>Team draft history</h3>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Team</th>
+                    <th>R1</th>
+                    <th>R2</th>
+                    <th>R3</th>
+                    <th>R4</th>
+                    <th>R5</th>
+                    <th>R6</th>
+                    <th>R7</th>
+                    <th>R8</th>
+                  </tr>
+                </thead>
+                <tbody id="team-history-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" data-page="admin">
+          <div class="grid-2">
+            <div class="card">
+              <h3>Data sync</h3>
+              <div class="roster-controls">
+                <button class="primary" type="button" id="sync-stats-button">Sync Sleeper stats</button>
+                <button class="warn" type="button" id="lock-week-button">Lock week</button>
+              </div>
+              <p id="sync-status" style="margin-top: 14px; color: var(--muted);">Last sync: none</p>
+              <p id="lock-status" style="margin-top: 8px; color: var(--muted);">No lineup snapshot yet.</p>
+            </div>
+
+            <div class="card">
+              <h3>Notes</h3>
+              <ul style="margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.8;">
+                <li>Draft order is editable in the Draft tab.</li>
+                <li>Lineup locking keeps week scoring stable.</li>
+                <li>Player trades and projections are planned next.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js"></script>
-    <script>
-      const playerTableBody = document.getElementById('playerTableBody');
-      const searchInput = document.getElementById('searchInput');
-      const positionFilter = document.getElementById('positionFilter');
-      const teamFilter = document.getElementById('teamFilter');
-      const injuryFilter = document.getElementById('injuryFilter');
-      const rankFilter = document.getElementById('rankFilter');
-      const draftFilter = document.getElementById('draftFilter');
-      const resetButton = document.getElementById('resetButton');
-      const refreshButton = document.getElementById('refreshButton');
-      const emptyState = document.getElementById('emptyState');
-
-      const state = { allPlayers: [], filteredPlayers: [], takenIds: new Set() };
-      const syncStatus = document.getElementById('syncStatus');
-      const sharedDraftState = {
-        enabled: false,
-        client: null,
-        channel: null
-      };
-
-      function hasGoogleAppsConfig() {
-        const config = (window.DRAFT_CONFIG && window.DRAFT_CONFIG) || {};
-        const appsUrl = String(config.googleAppsScriptUrl || '').trim();
-        return Boolean(
-          appsUrl &&
-          appsUrl.startsWith('https://') &&
-          !appsUrl.includes('REPLACE_WITH_YOUR')
-        );
-      }
-
-      function hasSupabaseConfig() {
-        const config = (window.DRAFT_CONFIG && window.DRAFT_CONFIG) || {};
-        const supabaseUrl = String(config.supabaseUrl || '').trim();
-        const supabaseKey = String(config.supabaseAnonKey || '').trim();
-        const supabaseLib = window.supabase || window.Supabase;
-
-        return Boolean(
-          supabaseUrl &&
-          supabaseUrl.startsWith('https://') &&
-          supabaseKey &&
-          !supabaseUrl.includes('YOUR_') &&
-          !supabaseKey.includes('YOUR_') &&
-          supabaseLib &&
-          typeof supabaseLib.createClient === 'function'
-        );
-      }
-
-      function updateSyncStatus() {
-        if (sharedDraftState.enabled && syncStatus) {
-          syncStatus.textContent = 'Shared realtime mode';
-          return;
-        }
-
-        if (syncStatus) {
-          syncStatus.textContent = 'Local browser only';
-        }
-      }
-
-      function firstNonEmpty(...values) {
-        for (const value of values) {
-          if (value !== undefined && value !== null && value !== '') return value;
-        }
-        return null;
-      }
-
-      function toNumber(value) {
-        if (value === null || value === undefined || value === '') return null;
-        const intValue = Number(value);
-        return Number.isFinite(intValue) ? intValue : null;
-      }
-
-      function normalizeText(value) {
-        if (value === null || value === undefined) return '';
-        return String(value).trim();
-      }
-
-      function getTeam(player) {
-        const team = firstNonEmpty(
-          player.team,
-          player.team_abbr,
-          player.team_name,
-          player.current_team,
-          player.franchise_name,
-          player.metadata && (player.metadata.team || player.metadata.team_abbr),
-          player.organization,
-          player.org
-        );
-        return normalizeText(team) || 'FA';
-      }
-
-      function getPosition(player) {
-        const position = firstNonEmpty(
-          player.position,
-          player.primary_position,
-          player.fantasy_positions && player.fantasy_positions[0],
-          player.positions && player.positions[0],
-          player.metadata && player.metadata.position
-        );
-        return normalizeText(position) || 'N/A';
-      }
-
-      function getStatus(player) {
-        return normalizeText(firstNonEmpty(player.status, player.injury_status, player.practice_participation, 'Active')) || 'Active';
-      }
-
-      function getInjuryStatus(player) {
-        const raw = [
-          player.injury_status,
-          player.injury_notes,
-          player.injury_body_part,
-          player.practice_description,
-          player.status,
-          player.practice_participation
-        ].filter(v => v !== null && v !== undefined && v !== '').join(' ');
-
-        if (!raw) return 'healthy';
-        const lowered = raw.toLowerCase();
-        if (/(injured|out|doubtful|questionable|limited|reserve|suspended|IR)/.test(lowered)) {
-          return 'injured';
-        }
-        if (/(active|full|probable|healthy)/.test(lowered)) {
-          return 'healthy';
-        }
-        return 'unknown';
-      }
-
-      function getRank2026(player) {
-        const rankCandidates = [
-          player.rank_2026,
-          player.fantasy_rank_2026,
-          player.fantasy_2026_rank,
-          player.fantasy_rank,
-          player.rank,
-          player.search_rank,
-          player.metadata && player.metadata.rank_2026,
-          player.metadata && player.metadata.fantasy_rank,
-          player.metadata && player.metadata.fantasy_2026_rank,
-          player.ranks && player.ranks.fantasy_2026,
-          player.ranks && player.ranks.rank_2026
-        ];
-
-        for (const candidate of rankCandidates) {
-          const numeric = toNumber(candidate);
-          if (numeric !== null && numeric > 0 && numeric < 9999999) {
-            return numeric;
-          }
-        }
-        return null;
-      }
-
-      function parsePlayerRecord(player, id) {
-        if (!player || typeof player !== 'object') return null;
-
-        const fullName = normalizeText(firstNonEmpty(
-          player.full_name,
-          player.name,
-          player.display_name,
-          player.first_name && player.last_name ? `${player.first_name} ${player.last_name}` : null
-        ));
-        const safeName = fullName || `Player ${id}`;
-
-        return {
-          id,
-          fullName: safeName,
-          playerId: normalizeText(firstNonEmpty(player.player_id, player.id, id)),
-          team: getTeam(player),
-          position: getPosition(player),
-          status: getStatus(player),
-          injuryFlag: getInjuryStatus(player),
-          rank2026: getRank2026(player),
-          active: player.active !== false,
-          raw: player
-        };
-      }
-
-      function normalizePlayers(payload) {
-        if (!payload) return [];
-
-        if (Array.isArray(payload)) {
-          return payload
-            .map((item, index) => parsePlayerRecord(item, index))
-            .filter(Boolean);
-        }
-
-        if (typeof payload === 'object') {
-          return Object.entries(payload)
-            .map(([id, player]) => parsePlayerRecord(player, id))
-            .filter(Boolean);
-        }
-
-        return [];
-      }
-
-      function populateSelect(selectElement, values) {
-        const uniqueValues = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
-        const optionMarkup = uniqueValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-        selectElement.innerHTML = selectElement.id === 'positionFilter'
-          ? '<option value="all">All positions</option>' + optionMarkup
-          : '<option value="all">All teams</option>' + optionMarkup;
-      }
-
-      function escapeHtml(value) {
-        return String(value)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
-      }
-
-      function renderSummary(players) {
-        const takenCount = players.filter((player) => isPlayerTaken(player)).length;
-        document.getElementById('statPlayers').textContent = players.length;
-        document.getElementById('statAvailable').textContent = players.filter((player) => !isPlayerTaken(player)).length;
-        document.getElementById('statTaken').textContent = takenCount;
-        document.getElementById('statInjured').textContent = players.filter((player) => player.injuryFlag === 'injured').length;
-        document.getElementById('statRanked').textContent = players.filter((player) => player.rank2026 !== null).length;
-      }
-
-      function getFilteredPlayers() {
-        const searchText = searchInput.value.trim().toLowerCase();
-        const positionValue = positionFilter.value;
-        const teamValue = teamFilter.value;
-        const injuryValue = injuryFilter.value;
-        const rankValue = rankFilter.value;
-        const draftValue = draftFilter.value;
-
-        return state.allPlayers.filter((player) => {
-          const matchesSearch = !searchText || [
-            player.fullName,
-            player.team,
-            player.position,
-            player.status
-          ].join(' ').toLowerCase().includes(searchText);
-
-          const matchesPosition = positionValue === 'all' || player.position === positionValue;
-          const matchesTeam = teamValue === 'all' || player.team === teamValue;
-
-          const matchesInjury =
-            injuryValue === 'all' ||
-            (injuryValue === 'injured' && player.injuryFlag === 'injured') ||
-            (injuryValue === 'healthy' && player.injuryFlag === 'healthy') ||
-            (injuryValue === 'unknown' && player.injuryFlag === 'unknown');
-
-          const matchesRank =
-            rankValue === 'all' ||
-            (rankValue === 'ranked' && player.rank2026 !== null) ||
-            (rankValue === 'unranked' && player.rank2026 === null);
-
-          const isTaken = isPlayerTaken(player);
-          const matchesDraft =
-            draftValue === 'all' ||
-            (draftValue === 'available' && !isTaken) ||
-            (draftValue === 'taken' && isTaken);
-
-          return matchesSearch && matchesPosition && matchesTeam && matchesInjury && matchesRank && matchesDraft;
-        });
-      }
-
-      function renderTable(players) {
-        if (!players.length) {
-          emptyState.classList.add('visible');
-          playerTableBody.innerHTML = '';
-          return;
-        }
-
-        emptyState.classList.remove('visible');
-
-        const sorted = [...players].sort((a, b) => {
-          const aRank = a.rank2026 ?? Number.MAX_SAFE_INTEGER;
-          const bRank = b.rank2026 ?? Number.MAX_SAFE_INTEGER;
-          if (aRank !== bRank) return aRank - bRank;
-          return a.fullName.localeCompare(b.fullName);
-        });
-
-        playerTableBody.innerHTML = sorted.map((player) => {
-          const injuryPill = player.injuryFlag === 'injured'
-            ? '<span class="pill injured">Injured</span>'
-            : player.injuryFlag === 'healthy'
-              ? '<span class="pill healthy">Healthy</span>'
-              : '<span class="pill" style="background:rgba(251,191,36,0.12);color:#fde68a;border:1px solid rgba(251,191,36,0.35);">Unknown</span>';
-
-          const rankText = player.rank2026 !== null ? `<span class="pill rank">#${player.rank2026}</span>` : '<span style="color:#9badc7;">N/A</span>';
-          const selected = isPlayerTaken(player);
-          const rowClass = selected ? 'taken' : 'available';
-          const buttonText = selected ? '✓ Taken' : 'Mark taken';
-          const buttonClass = selected ? 'draft-toggle taken-button' : 'draft-toggle';
-
-          return `
-            <tr class="${rowClass}" data-player-id="${escapeHtml(player.playerId || player.id)}">
-              <td><strong>${escapeHtml(player.fullName)}</strong></td>
-              <td>${escapeHtml(player.playerId || 'N/A')}</td>
-              <td>${escapeHtml(player.team)}</td>
-              <td>${escapeHtml(player.position)}</td>
-              <td>${escapeHtml(player.status)}</td>
-              <td>${injuryPill}</td>
-              <td>${rankText}</td>
-              <td>
-                <button class="${buttonClass}" data-player-id="${escapeHtml(player.playerId || player.id)}" type="button">${buttonText}</button>
-              </td>
-            </tr>
-          `;
-        }).join('');
-      }
-
-      function refreshDashboard() {
-        const filtered = getFilteredPlayers();
-        state.filteredPlayers = filtered;
-        renderTable(filtered);
-        renderSummary(filtered);
-      }
-
-      function setupFilters() {
-        searchInput.addEventListener('input', refreshDashboard);
-        positionFilter.addEventListener('change', refreshDashboard);
-        teamFilter.addEventListener('change', refreshDashboard);
-        injuryFilter.addEventListener('change', refreshDashboard);
-        rankFilter.addEventListener('change', refreshDashboard);
-        draftFilter.addEventListener('change', refreshDashboard);
-
-        resetButton.addEventListener('click', () => {
-          searchInput.value = '';
-          positionFilter.value = 'all';
-          teamFilter.value = 'all';
-          injuryFilter.value = 'all';
-          rankFilter.value = 'all';
-          draftFilter.value = 'all';
-          refreshDashboard();
-        });
-
-        refreshButton.addEventListener('click', async () => {
-          refreshButton.disabled = true;
-          refreshButton.textContent = 'Refreshing...';
-
-          try {
-            const response = await fetch('https://api.sleeper.app/v1/players/nfl', { cache: 'no-store' });
-            if (!response.ok) {
-              throw new Error(`API request failed: ${response.status}`);
-            }
-
-            const payload = await response.json();
-            const players = normalizePlayers(payload);
-            state.allPlayers = players;
-            updateFilterOptions(players);
-            refreshDashboard();
-            emptyState.textContent = 'Player data refreshed successfully.';
-            emptyState.classList.remove('visible');
-          } catch (error) {
-            console.error(error);
-            emptyState.textContent = 'Unable to refresh player data from the Sleeper API.';
-            emptyState.classList.add('visible');
-          } finally {
-            refreshButton.disabled = false;
-            refreshButton.textContent = 'Refresh API data';
-          }
-        });
-      }
-
-      function updateFilterOptions(players) {
-        populateSelect(positionFilter, players.map((player) => player.position));
-        populateSelect(teamFilter, players.map((player) => player.team));
-      }
-
-      function renderLoadError(message) {
-        emptyState.classList.add('visible');
-        emptyState.textContent = message;
-        playerTableBody.innerHTML = '';
-      }
-
-      function getDraftStateKey() {
-        return 'legacy-grudge-match-draft-state';
-      }
-
-      function getLocalTakenIds() {
-        try {
-          const saved = JSON.parse(localStorage.getItem(getDraftStateKey()) || '[]');
-          return new Set(Array.isArray(saved) ? saved : []);
-        } catch (error) {
-          return new Set();
-        }
-      }
-
-      function setLocalTakenIds(ids) {
-        localStorage.setItem(getDraftStateKey(), JSON.stringify([...ids]));
-      }
-
-      function getTakenIds() {
-        return state.takenIds;
-      }
-
-      async function syncTakenIdsFromSupabase() {
-        if (!sharedDraftState.enabled || !sharedDraftState.client) {
-          state.takenIds = getLocalTakenIds();
-          return;
-        }
-
-        const { data, error } = await sharedDraftState.client
-          .from('draft_state')
-          .select('player_id, taken');
-
-        if (error) {
-          console.warn('Supabase draft sync unavailable:', error.message);
-          state.takenIds = getLocalTakenIds();
-          return;
-        }
-
-        const nextIds = new Set(
-          (data || [])
-            .filter((row) => row && row.taken)
-            .map((row) => String(row.player_id))
-        );
-
-        state.takenIds = nextIds;
-        setLocalTakenIds(nextIds);
-      }
-
-      async function initializeSharedDraftSync() {
-        const useGoogleApps = hasGoogleAppsConfig();
-        const useSupabase = hasSupabaseConfig();
-
-        if (!useGoogleApps && !useSupabase) {
-          sharedDraftState.enabled = false;
-          state.takenIds = getLocalTakenIds();
-          updateSyncStatus();
-          return;
-        }
-
-        sharedDraftState.enabled = true;
-        sharedDraftState.mode = useGoogleApps ? 'google' : 'supabase';
-
-        if (useGoogleApps) {
-          sharedDraftState.googleAppsScriptUrl = window.DRAFT_CONFIG.googleAppsScriptUrl;
-          await syncTakenIdsFromGoogleApps();
-          window.setInterval(async () => {
-            await syncTakenIdsFromGoogleApps();
-            refreshDashboard();
-          }, 1500);
-          updateSyncStatus();
-          return;
-        }
-
-        sharedDraftState.client = window.supabase.createClient(
-          window.DRAFT_CONFIG.supabaseUrl,
-          window.DRAFT_CONFIG.supabaseAnonKey,
-          { auth: { persistSession: false } }
-        );
-
-        await syncTakenIdsFromSupabase();
-
-        sharedDraftState.channel = sharedDraftState.client.channel('draft-state-updates');
-        sharedDraftState.channel
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'draft_state' }, async () => {
-            await syncTakenIdsFromSupabase();
-            refreshDashboard();
-          })
-          .subscribe((status) => {
-            if (status === 'SUBSCRIBED') {
-              updateSyncStatus();
-            }
-          });
-
-        updateSyncStatus();
-      }
-
-      async function syncTakenIdsFromGoogleApps() {
-        const appsUrl = window.DRAFT_CONFIG && window.DRAFT_CONFIG.googleAppsScriptUrl;
-        if (!appsUrl) {
-          state.takenIds = getLocalTakenIds();
-          return;
-        }
-
-        try {
-          const response = await fetch(`${appsUrl}?action=read`, { cache: 'no-store' });
-          if (!response.ok) {
-            throw new Error(`Google Apps Script read failed: ${response.status}`);
-          }
-
-          const payload = await response.json();
-          const rows = Array.isArray(payload.rows) ? payload.rows : [];
-          const nextIds = new Set(
-            rows
-              .filter((row) => row && row.taken)
-              .map((row) => String(row.player_id))
-          );
-          state.takenIds = nextIds;
-          setLocalTakenIds(nextIds);
-        } catch (error) {
-          console.warn('Google Apps Script sync unavailable:', error.message);
-          state.takenIds = getLocalTakenIds();
-        }
-      }
-
-      function isPlayerTaken(player) {
-        return getTakenIds().has(String(player.playerId || player.id));
-      }
-
-      async function persistDraftSelection(playerId, taken) {
-        const appsUrl = window.DRAFT_CONFIG && window.DRAFT_CONFIG.googleAppsScriptUrl;
-
-        if (sharedDraftState.mode === 'google' && appsUrl) {
-          try {
-            const response = await fetch(appsUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: 'upsert',
-                player_id: String(playerId),
-                taken,
-                updated_at: new Date().toISOString()
-              })
-            });
-
-            if (!response.ok) {
-              throw new Error(`Google Apps Script write failed: ${response.status}`);
-            }
-
-            await syncTakenIdsFromGoogleApps();
-            refreshDashboard();
-            return;
-          } catch (error) {
-            console.warn('Unable to sync draft state to Google Sheets:', error.message);
-            return;
-          }
-        }
-
-        if (!sharedDraftState.enabled || !sharedDraftState.client) {
-          const next = new Set(getTakenIds());
-          if (taken) {
-            next.add(String(playerId));
-          } else {
-            next.delete(String(playerId));
-          }
-          state.takenIds = next;
-          setLocalTakenIds(next);
-          refreshDashboard();
-          return;
-        }
-
-        const { error } = await sharedDraftState.client
-          .from('draft_state')
-          .upsert(
-            { player_id: String(playerId), taken, updated_at: new Date().toISOString() },
-            { onConflict: 'player_id' }
-          );
-
-        if (error) {
-          console.warn('Unable to sync draft state to Supabase:', error.message);
-          return;
-        }
-
-        await syncTakenIdsFromSupabase();
-        refreshDashboard();
-      }
-
-      async function toggleDraftSelection(playerId) {
-        const selectedId = String(playerId);
-        const current = new Set(getTakenIds());
-        const nextTaken = !current.has(selectedId);
-
-        if (nextTaken) {
-          current.add(selectedId);
-        } else {
-          current.delete(selectedId);
-        }
-
-        state.takenIds = current;
-        await persistDraftSelection(selectedId, nextTaken);
-      }
-
-      function attachDraftHandlers() {
-        playerTableBody.addEventListener('click', (event) => {
-          const button = event.target.closest('.draft-toggle');
-          if (!button) return;
-          const playerId = button.getAttribute('data-player-id');
-          if (playerId) toggleDraftSelection(playerId);
-        });
-      }
-
-      async function loadPlayers() {
-        try {
-          const response = await fetch('./SleeperAPI.json', { cache: 'no-store' });
-          if (!response.ok) {
-            throw new Error(`Could not load SleeperAPI.json (${response.status})`);
-          }
-          const payload = await response.json();
-          const players = normalizePlayers(payload);
-
-          state.allPlayers = players;
-          updateFilterOptions(players);
-          refreshDashboard();
-
-          if (!players.length) {
-            renderLoadError('SleeperAPI.json loaded successfully, but it contains no player entries yet.');
-          }
-        } catch (error) {
-          renderLoadError('Unable to load SleeperAPI.json. Make sure the file exists in this directory and contains valid JSON data.');
-          console.error(error);
-        }
-      }
-
-      setupFilters();
-      attachDraftHandlers();
-      initializeSharedDraftSync();
-      loadPlayers();
-    </script>
+    <script src="./app.js"></script>
   </body>
 </html>
