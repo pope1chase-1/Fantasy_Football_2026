@@ -61,17 +61,25 @@ function getTeamRows() {
 
   if (!values.length) return rows;
 
-  for (let i = 0; i < values.length; i += 1) {
+  const headers = values[0].map((value) => String(value || '').trim().toLowerCase());
+  const teamIdIndex = headers.findIndex((header) => ['team id', 'id', 'teamid'].includes(header));
+  const teamNameIndex = headers.findIndex((header) => ['team name', 'team_name', 'team', 'name'].includes(header));
+  const managerIndex = headers.findIndex((header) => ['manager', 'manager name', 'owner'].includes(header));
+
+  for (let i = 1; i < values.length; i += 1) {
     const row = values[i];
     if (!row || row.every((cell) => String(cell || '').trim() === '')) continue;
 
-    const teamName = row[1];
-    if (teamName === undefined || String(teamName).trim() === '') continue;
+    const rawTeamName = teamNameIndex !== -1 ? row[teamNameIndex] : row[1];
+    if (rawTeamName === undefined || String(rawTeamName).trim() === '') continue;
+
+    const teamId = teamIdIndex !== -1 ? row[teamIdIndex] : i;
+    const manager = managerIndex !== -1 ? row[managerIndex] : row[2];
 
     rows.push({
-      id: i,
-      name: String(teamName).trim(),
-      manager: row[2] ? String(row[2]).trim() : ''
+      id: Number(teamId) || i,
+      name: String(rawTeamName).trim(),
+      manager: manager !== undefined && manager !== null ? String(manager).trim() : ''
     });
   }
 

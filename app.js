@@ -74,6 +74,28 @@ function initRosterState() {
   });
 }
 
+function normalizeName(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
+function resolveTeamId(teamReference) {
+  if (teamReference === null || teamReference === undefined || teamReference === '') return null;
+  const asNumber = Number(teamReference);
+  if (!Number.isNaN(asNumber) && Number.isFinite(asNumber)) {
+    return asNumber;
+  }
+
+  const normalizedReference = String(teamReference).trim().toLowerCase();
+  const match = state.teams.find((team) => {
+    return team.name.toLowerCase() === normalizedReference || String(team.id) === normalizedReference;
+  });
+
+  return match ? match.id : null;
+}
+
 function normalizePlayerPayload(data) {
   if (!data || typeof data !== 'object') return [];
   const entries = Object.entries(data).slice(0, 200);
@@ -89,6 +111,34 @@ function normalizePlayerPayload(data) {
       status: 'Active'
     };
   });
+}
+
+function findSleeperPlayerId(entry) {
+  const rawName = String(entry.name || entry.player_name || entry.player || '').trim();
+  const rawPosition = String(entry.position || '').trim();
+  const rawTeam = String(entry.team || entry.team_name || '').trim();
+  if (!rawName) {
+    return String(entry.playerId || entry.player_id || '').trim();
+  }
+
+  const normalizedRosterName = normalizeName(rawName);
+  const rosterPosition = rawPosition ? rawPosition.toUpperCase() : '';
+  const rosterTeam = rawTeam ? rawTeam.toUpperCase() : '';
+
+  const match = state.allPlayers.find((player) => {
+    const candidateName = normalizeName(player.fullName || '');
+    const candidatePosition = String(player.position || '').trim().toUpperCase();
+    const candidateTeam = String(player.team || '').trim().toUpperCase();
+
+    const nameMatch = candidateName && (candidateName === normalizedRosterName || candidateName.includes(normalizedRosterName) || normalizedRosterName.includes(candidateName));
+    const positionMatch = !rosterPosition || !candidatePosition || candidatePosition === rosterPosition;
+    const teamMatch = !rosterTeam || !candidateTeam || candidateTeam === rosterTeam || candidateTeam === 'FA';
+
+    return nameMatch && positionMatch && teamMatch;
+  });
+
+  if (match) return String(match.id);
+  return String(entry.playerId || entry.player_id || `${rawName}-${rawTeam}` || '').trim();
 }
 
 function loadTeamsFromSheet() {
@@ -150,15 +200,21 @@ function loadRostersFromSheet() {
         const playerName = String(row.player_name || row.player || row.name || '').trim();
         const position = String(row.position || row.pos || 'N/A').trim();
         const status = String(row.status || row.slot || 'Bench').trim() || 'Bench';
-        const playerId = String(row.player_id || row.playerId || `${playerName}-${teamName}` || '').trim();
+        const rowPlayerId = String(row.player_id || row.playerId || '').trim();
 
         if (!teamName || !playerName) return;
 
-        const normalizedKey = teamName.toLowerCase();
-        const teamId = teamIdsByName[normalizedKey] || state.selectedTeamId || 1;
+        const teamId = teamIdsByName[teamName.toLowerCase()] || resolveTeamId(teamName) || state.selectedTeamId || 1;
+        const resolvedPlayerId = rowPlayerId || findSleeperPlayerId({
+          name: playerName,
+          position,
+          team: teamName,
+          player_id: rowPlayerId,
+          playerId: rowPlayerId
+        });
 
         const nextEntry = {
-          playerId,
+          playerId: resolvedPlayerId,
           name: playerName,
           position,
           status: status === 'Starter' || status === 'Bench' || status === 'IR' ? status : 'Bench'
@@ -168,7 +224,7 @@ function loadRostersFromSheet() {
           nextRosterByTeam[teamId] = [];
         }
 
-        const existingIndex = nextRosterByTeam[teamId].findIndex((entry) => entry.playerId === playerId || entry.name === playerName);
+        const existingIndex = nextRosterByTeam[teamId].findIndex((entry) => entry.playerId === resolvedPlayerId || entry.name === playerName);
         if (existingIndex >= 0) {
           nextRosterByTeam[teamId][existingIndex] = nextEntry;
         } else {
@@ -188,6 +244,50 @@ function loadRostersFromSheet() {
         state.rosterOrderByTeam[team.id] = roster.map((entry, index) => index + 1);
       });
     });
+}
+
+function loadMatchupsFromSheet() {
+  if (!GOOGLE_APPS_SCRIPT_URL) return Promise.resolve(state.matchups);
+
+  return fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=Matchups`, { cache: 'no-store' })
+    .then((response) => {
+      if (!response.ok) throw new Error('Unable to load matchup data');
+      return response.json();
+    })
+    .then((payload) => {
+      const rows = Array.isArray(payload && payload.rows) ? payload.rows : [];
+      if (!rows.length) return state.matchups;
+
+      const nextMatchups = rows.map((row) => {
+        const week = Number(row.week || row.Week || row.matchup_week || row.week_number || 1);
+        const teamAId = row.TeamA_ID || row.team_a_id || row.teamA_ID || row.team_a || row.teamA || row.team1 || row.TeamA || row.team_a_name || row.teamAName;
+        const teamBId = row.TeamB_ID || row.team_b_id || row.teamB_ID || row.team_b || row.teamB || row.team2 || row.TeamB || row.team_b_name || row.teamBName;
+        const scoreA = Number(row.ScoreA || row.score_a || row.scoreA || row.team_a_score || row.points_a || 0);
+        const scoreB = Number(row.ScoreB || row.score_b || row.scoreB || row.team_b_score || row.points_b || 0);
+
+        const teamA = resolveTeamId(teamAId);
+        const teamB = resolveTeamId(teamBId);
+
+        if (!teamA || !teamB || !Number.isFinite(week)) {
+          return null;
+        }
+
+        return {
+          week,
+          teamA,
+          teamB,
+          scoreA,
+          scoreB
+        };
+      }).filter(Boolean);
+
+      if (nextMatchups.length) {
+        state.matchups = nextMatchups;
+      }
+
+      return state.matchups;
+    })
+    .catch(() => state.matchups);
 }
 
 function loadDraftOwnership() {
@@ -547,7 +647,7 @@ function init() {
   initRosterState();
   bindEvents();
   document.getElementById('matchup-week-select').value = String(state.selectedWeek);
-  Promise.all([loadTeamsFromSheet(), loadDraftOwnership(), loadPlayersFromApi()]).then(() => {
+  Promise.all([loadTeamsFromSheet(), loadDraftOwnership(), loadPlayersFromApi(), loadMatchupsFromSheet()]).then(() => {
     return loadRostersFromSheet().finally(() => {
       renderDashboard();
       renderRosters();
