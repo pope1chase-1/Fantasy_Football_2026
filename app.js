@@ -1,6 +1,18 @@
 const config = window.DRAFT_CONFIG || {};
 const GOOGLE_APPS_SCRIPT_URL = config.googleAppsScriptUrl || config.appsScriptUrl || '';
 
+function isLocalDevelopmentHost() {
+  const hostname = window.location.hostname || '';
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local');
+}
+
+function getSheetReadUrl(sheetName) {
+  if (isLocalDevelopmentHost()) {
+    return `/api/read?sheet=${encodeURIComponent(sheetName)}`;
+  }
+  return `${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=${encodeURIComponent(sheetName)}`;
+}
+
 const state = {
   currentTab: 'dashboard',
   week: 1,
@@ -96,13 +108,15 @@ function loadTeamsFromSheet() {
     return Promise.resolve(state.teams);
   }
 
-  return fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=Teams`, { cache: 'no-store' })
+  const readUrl = getSheetReadUrl('Teams');
+
+  return fetch(readUrl, { cache: 'no-store' })
     .then((response) => {
       if (!response.ok) throw new Error('Unable to load team names');
       return response.json();
     })
     .then((payload) => {
-      debugDataLoad('Teams', `${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=Teams`, payload);
+      debugDataLoad('Teams', readUrl, payload);
       const rows = Array.isArray(payload && payload.rows) ? payload.rows : [];
       if (!rows.length) {
         state.teams = [];
@@ -222,7 +236,9 @@ function saveRosterSlotUpdate(teamId, playerId, nextSlot, isActive, nextPosition
 
   const positionValue = nextPosition !== null ? String(nextPosition || '').trim() : '';
 
-  return fetch(GOOGLE_APPS_SCRIPT_URL, {
+  const requestUrl = isLocalDevelopmentHost() ? '/api/write' : GOOGLE_APPS_SCRIPT_URL;
+
+  return fetch(requestUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -254,13 +270,15 @@ function loadRostersFromSheet() {
     return Promise.resolve();
   }
 
-  return fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=Rosters`, { cache: 'no-store' })
+  const readUrl = getSheetReadUrl('Rosters');
+
+  return fetch(readUrl, { cache: 'no-store' })
     .then((response) => {
       if (!response.ok) throw new Error('Unable to load roster data');
       return response.json();
     })
     .then((payload) => {
-      debugDataLoad('Rosters', `${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=Rosters`, payload);
+      debugDataLoad('Rosters', readUrl, payload);
       const rows = Array.isArray(payload && payload.rows) ? payload.rows : [];
       if (!rows.length) {
         state.rosterByTeam = {};
@@ -350,13 +368,15 @@ function loadMatchupsFromSheet() {
     return Promise.resolve(state.matchups);
   }
 
-  return fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=Matchups`, { cache: 'no-store' })
+  const readUrl = getSheetReadUrl('Matchups');
+
+  return fetch(readUrl, { cache: 'no-store' })
     .then((response) => {
       if (!response.ok) throw new Error('Unable to load matchup data');
       return response.json();
     })
     .then((payload) => {
-      debugDataLoad('Matchups', `${GOOGLE_APPS_SCRIPT_URL}?action=read&sheet=Matchups`, payload);
+      debugDataLoad('Matchups', readUrl, payload);
       const rows = Array.isArray(payload && payload.rows) ? payload.rows : [];
       if (!rows.length) {
         state.matchups = [];
